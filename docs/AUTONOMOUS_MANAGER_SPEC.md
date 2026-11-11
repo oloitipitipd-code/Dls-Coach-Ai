@@ -515,8 +515,14 @@ Do not call a squad optimised or complete until:
 - Recommendations explain evidence and trade-offs; no fabricated ratings, stats, prices or guarantees.
 - The app's actual implementation is distinguished from planned features. A specification, mock-up or recommendation algorithm is not proof that live vision, automatic recruitment, player upgrades or other features are implemented.
 
-### Current product truth
-The current Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, basic development priorities, on-device OCR text extraction for review, and sharing match evidence/report text. OCR does not yet create player records automatically. Match footage is shared for external review; the app does not perform in-app video analysis. Live screen capture, live computer vision, private tactical overlay, voice coaching, automated structured squad extraction, persistent coach-outcome development ledger and recruitment-market integration are not implemented in the inspected app version. Do not describe any of those as working until code is added and a successful build plus device testing confirms it.
+### Current product truth — development branch v1.6.0
+The Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, development priorities, match trend analysis, manually tagged tactical events, player contribution records, manual development snapshots, coaching report export/share and JSON backup/restore.
+
+The development branch adds user-authorised Android MediaProjection capture, sampled on-device ML Kit OCR, conservative screen-type classification and a text-line parser that proposes possible player names and overall ratings only when squad/player-profile context is detected. A review inbox requires explicit confirmation before candidates are added to the local squad. This is not validated visual player-card recognition: positions and individual attributes remain unknown/unverified, and OCR accuracy and device impact have not yet been validated on the target Infinix Smart 9.
+
+The Manager tab provides manually confirmed resource snapshots, a local recommendation approval/dismissal/tested history and schema-version 3 backup support (schema versions 1 and 2 remain readable). Marking a recommendation tested records the user's confirmation only; it does not prove the result. The app does not access private account inventory or perform in-game actions.
+
+Match footage is not analysed in-app. No ball/player tracking, live tactical alerts, tactical overlay, voice coaching, automatic resource/gift detection, automatic player development outcome detection, recruitment-market integration or direct DLS account authentication is implemented. Device-level capture stability, thermal impact, battery use, game responsiveness and real-screen OCR accuracy still require testing on the target phone. A successful CI build is not a substitute for that device testing.
 
 
 ## Optional external integrations — version 1.4.0
