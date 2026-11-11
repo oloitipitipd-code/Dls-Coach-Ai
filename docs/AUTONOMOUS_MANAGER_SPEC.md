@@ -194,3 +194,39 @@ The user wants the companion to identify a precise visible target area on goal w
 - Never move the aim joystick, tap shoot, change power, select a shot type, or automate any gameplay input.
 - Validate separately across camera views, shooting distances/angles, goalkeeper positions and shot types on the target Infinix Smart 9. Measure target-selection agreement, on-target classification accuracy, false target recommendations, analysis latency, battery/thermal impact and game responsiveness.
 - Until these tests pass, label precision shooting guidance experimental and provide only broad directional advice when reliable.
+
+## Team spacing, passing options and opponent-lane denial — explicit user requirement
+
+The user wants DLS Coach AI to help their team create useful passing options in possession while reducing the opponent's ability to pass through or around the user's defensive shape. This is tactical advice based only on visible evidence; the app never moves players or changes game controls automatically.
+
+### Creating useful options for the user's team
+- Assess visible teammate spacing around the ball carrier: nearby support, forward options, width, depth, central overloads and isolated players.
+- Identify when teammates appear too close together, hidden behind opponents, crowded into one channel, or leaving no safe backward/recycling option.
+- Recommend a practical action such as switch play, use the wide option, pass to a supporting midfielder, release a forward run, recycle possession, or avoid forcing a pass.
+- Identify visible space teammates could attack with a run, but describe it as an opportunity rather than claiming the app can trigger or control that run.
+- Suggest formation/role/tactical adjustments between matches when the same spacing problem repeatedly appears. Explain the trade-off with defensive cover and counterattack risk.
+- Draw a private overlay marker for a promising passing option or open space only when player tracking and team identification are sufficiently reliable. Hide it when uncertain.
+
+### Closing opponent passing opportunities
+- Track visible opponent ball carrier, nearby receivers, teammate defenders, passing lanes and the user's defensive shape across consecutive frames.
+- Identify dangerous options such as a central forward pass between midfield and defence, a through-ball channel behind the back line, a switch to an unmarked wide player, or a short pass that bypasses the first defender.
+- Recommend which zone or lane to protect and the most plausible nearby defender/midfielder to use as cover, based on visible position, goal-side relationship and ability to block or intercept the lane.
+- Prioritise protecting the central route to goal, then the most immediate visible threat; do not tell the user to chase the ball if doing so would visibly open a more dangerous passing lane.
+- Give concise instructions such as **CLOSE CENTRAL LANE**, **TRACK THE RUNNER**, **PROTECT THE LEFT CHANNEL**, or **PRESS THE BALL CARRIER — COVER THE PASS INSIDE** only when supported by the scene.
+- Distinguish blocking a passing lane from attempting a tackle or interception. Recommend an interception only when the defender appears able to reach the ball safely; otherwise advise screening, tracking or recovering goal-side.
+- Detect repeated opponent patterns only after multiple observed examples. Label one-off possibilities as suspected, not established weaknesses.
+
+### Tactical shape and adaptation
+- Evaluate team compactness, horizontal and vertical gaps, distance between midfield and defence, width, defensive line depth, fullback exposure and cover behind pressing players.
+- Recommend whether to press, hold shape, drop/recover, narrow the block, protect a flank or switch the point of attack. State the main benefit and the risk (for example, narrowing may concede space wide).
+- Adapt advice when the opponent changes their build-up route, makes a substitution, changes formation or repeatedly exploits a different channel, but only when the change is visually supported.
+- Preserve the user's preferred aggressive-attacking approach while maintaining enough players in defensive cover to reduce counterattacks.
+- Provide between-match formation and role recommendations when live evidence repeatedly shows structural gaps; do not claim a formation alone guarantees that lanes will be closed.
+
+### Validation and safeguards
+- Use multi-frame tracking of players, ball, team colours and pitch orientation; do not infer hidden player instructions, attributes or opponent intentions.
+- If team identity, player positions or camera perspective are unclear, show **TEAM SHAPE UNCLEAR — HOLD POSITION / USE YOUR JUDGEMENT** rather than naming a lane or player.
+- Measure lane-threat detection precision/recall, false alerts, missed dangerous passes, alert timing, and whether recommended defensive shape actually reduced completed opponent passes in labelled DLS 26 footage.
+- Measure attacking support recommendations separately: useful passing-option agreement, successful progression, possession losses and counterattacks conceded.
+- Evaluate on held-out match clips and the target Infinix Smart 9. Monitor latency, battery, heat and game responsiveness; reduce sampling or pause if performance is affected.
+- All arrows, lane markers and tactical labels remain in the user's private companion overlay/local data by default. No game input automation, player movement, game modification, traffic interception or opponent-device display.
