@@ -39,12 +39,10 @@ jobs:
           for attempt in 1 2 3; do
             echo "Android lint attempt ${attempt}/3"
             if [ "$attempt" -eq 1 ]; then
-              gradle lintDebug
+              if gradle lintDebug; then exit 0; fi
             else
-              gradle lintDebug --refresh-dependencies
+              if gradle lintDebug --refresh-dependencies; then exit 0; fi
             fi
-            status=$?
-            if [ "$status" -eq 0 ]; then exit 0; fi
             if [ "$attempt" -lt 3 ]; then sleep 10; fi
           done
           exit 1
