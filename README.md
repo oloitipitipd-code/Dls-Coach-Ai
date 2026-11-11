@@ -30,6 +30,10 @@ The live companion requests Android MediaProjection permission, creates a foregr
 ## Important limitations
 OCR is fallible. Extracted player names and ratings are drafts and require user review; positions and attributes are not inferred when they are not clearly visible. Full match-video event analysis is not yet implemented. The app does not modify DLS, automate gameplay, spend in-game currency, or guarantee wins.
 
+## Real-account integration audit
+
+Before attempting deeper DLS integration, see [REAL_ACCOUNT_INTEGRATION_AUDIT.md](docs/REAL_ACCOUNT_INTEGRATION_AUDIT.md) for verified technical capabilities, First Touch Games' published restrictions, Android platform constraints, and the safe implementation boundary. The app does not have a verified direct DLS account API and must not automate game actions or modify account data.
+
 ## Autonomous manager roadmap
 The requirements, privacy rules, workflow, core screens, and staged delivery plan are documented in [AUTONOMOUS_MANAGER_SPEC.md](docs/AUTONOMOUS_MANAGER_SPEC.md).
 
