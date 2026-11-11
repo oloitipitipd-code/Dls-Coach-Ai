@@ -39,7 +39,7 @@ class LiveCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            stopCapture()
+            stopCapture("Capture stopped by user")
             setCaptureState(false, "Capture stopped")
             stopSelf()
             return START_NOT_STICKY
@@ -72,7 +72,7 @@ class LiveCaptureService : Service() {
             projection = manager.getMediaProjection(resultCode, resultData)
             projection?.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
-                    stopCapture()
+                    stopCapture("Capture stopped by Android or user", stopProjection = false)
                     stopSelf()
                 }
             }, Handler(mainLooper))
@@ -122,8 +122,7 @@ class LiveCaptureService : Service() {
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(NOTIFICATION_ID, buildNotification("Capture active · frames are processed locally only"))
         } catch (error: Exception) {
-            stopCapture()
-            setCaptureState(false, "Capture failed: ${error.localizedMessage ?: "unknown error"}")
+            stopCapture("Capture failed: ${error.localizedMessage ?: "unknown error"}")
             stopSelf()
         }
         return START_NOT_STICKY
@@ -173,8 +172,13 @@ class LiveCaptureService : Service() {
             .apply()
     }
 
-    private fun stopCapture() {
-        setCaptureState(false, "Capture stopped")
+    private fun stopCapture(
+        status: String = "Capture stopped",
+        stopProjection: Boolean = true
+    ) {
+        val hadResources = projection != null || virtualDisplay != null || imageReader != null || workerThread != null
+        if (!hadResources) return
+        setCaptureState(false, status)
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.setOnImageAvailableListener(null, null)
@@ -182,7 +186,7 @@ class LiveCaptureService : Service() {
         imageReader = null
         val activeProjection = projection
         projection = null
-        activeProjection?.stop()
+        if (stopProjection) activeProjection?.stop()
         workerThread?.quitSafely()
         workerThread = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -194,7 +198,7 @@ class LiveCaptureService : Service() {
     }
 
     override fun onDestroy() {
-        stopCapture()
+        stopCapture("Capture service ended")
         super.onDestroy()
     }
 
