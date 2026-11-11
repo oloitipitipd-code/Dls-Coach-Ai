@@ -165,3 +165,32 @@ All companion coaching visuals and alerts (pass arrows, through-ball routes, sho
 - If Android cannot safely display the overlay over DLS on the target device, provide an accessible companion notification/audio mode rather than bypassing platform protections.
 - Clearly indicate capture/overlay state and provide immediate stop/hide controls. Do not claim absolute privacy against device-level screen recording, malware, or anyone physically viewing the user's screen.
 
+
+## Precision shooting and shot-outcome learning — explicit user requirement
+
+The user wants the companion to identify a precise visible target area on goal when shooting and improve shot accuracy over time. This is advisory guidance only; the user performs all aiming and shooting inputs.
+
+### Target and trajectory guidance
+- When a shot is a reasonable option, identify the visible goal mouth and goalkeeper/defender positions across multiple frames.
+- Mark a specific recommended target area on the visible goal (for example, low far corner, high far corner, or near-post space) only when the goal boundaries, camera perspective and goalkeeper position are sufficiently clear.
+- Draw a private overlay guide from the ball/shooter toward that target. Clearly distinguish the **recommended aim direction** from the **estimated ball path**; neither is an exact guarantee of the in-game trajectory.
+- If useful and supported by validated DLS-specific evidence, show a short predicted path or landing/goal-entry region. Do not invent exact joystick coordinates, shot power, curve, spin, or a guaranteed path.
+- Consider shooting angle, distance, visible goalkeeper position, defenders blocking the lane, body/ball movement if reliably observable, and whether a teammate has a clearly better chance.
+- Recommend a shot type (such as normal or power shot) only after the relevant DLS controls and their effects have been verified from reliable evidence. Otherwise give direction-only guidance.
+- If the goal is partly off-screen, the camera is moving, the keeper/ball cannot be tracked, or multiple lanes are similarly plausible, hide the precise marker and say **Shot target unclear — aim manually or create a clearer angle**.
+
+### Accuracy improvement loop
+1. Before the shot, record the recommended target zone, estimated lane openness, confidence and timestamp locally.
+2. After the shot, analyse the supplied/captured frames to determine the observed shot direction and outcome only if these are visually clear. Allow the user to correct uncertain labels.
+3. Classify outcomes conservatively (e.g. on target, saved, blocked, wide, scored, or unknown); do not infer a miss or save from an ambiguous replay or camera cut.
+4. Compare recommendations with observed outcomes over multiple shots and matches. Track target-selection agreement, on-target rate and goal conversion separately; do not treat a goal alone as proof that the aim recommendation was accurate.
+5. Tune recommendations only using labelled, sufficiently numerous examples. Keep training/test evidence separate where model evaluation is performed, expose confidence and sample counts, and avoid claiming improvement without measured held-out results.
+6. Provide a brief post-match shooting report showing attempts analysed, unknown outcomes, target zones recommended, and measured results. Let the user correct records and reset personal calibration.
+
+### Accuracy, privacy and fair-play safeguards
+- Use conservative multi-frame tracking and temporal smoothing; no confident precise target from one uncertain screenshot/frame.
+- Do not promise perfect accuracy or a guaranteed goal. Display calibrated confidence only after validation against labelled DLS 26 footage.
+- Keep shot markers, aim guides and shot-history analysis inside the user's own companion overlay and local data store by default, subject to Android permissions and the previously defined privacy requirements.
+- Never move the aim joystick, tap shoot, change power, select a shot type, or automate any gameplay input.
+- Validate separately across camera views, shooting distances/angles, goalkeeper positions and shot types on the target Infinix Smart 9. Measure target-selection agreement, on-target classification accuracy, false target recommendations, analysis latency, battery/thermal impact and game responsiveness.
+- Until these tests pass, label precision shooting guidance experimental and provide only broad directional advice when reliable.
