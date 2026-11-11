@@ -51,7 +51,7 @@ data class Player(
     val statsKnown: Boolean = false
 )
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
-data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
+data class Match(val result: String, val scored: Int, val conceded: Int, val note: String, val scorers: List<String> = emptyList(), val assists: List<String> = emptyList())
 data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
 data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
@@ -358,6 +358,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         }
         if (showMatchDialog) {
             AddMatchDialog(
+                players = players,
                 onDismiss = { showMatchDialog = false },
                 onAdd = { match -> matches = listOf(match) + matches; showMatchDialog = false }
             )
@@ -637,6 +638,24 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                 }
             }
         }
+        Text("PLAYER CONTRIBUTIONS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Based only on goal scorers and assists you enter when logging matches. Missing entries are not treated as zero performance.", style = MaterialTheme.typography.bodySmall)
+        val contributions = playerContributionStats(matches)
+        if (contributions.isEmpty()) {
+            Text("No player contributions recorded yet. Add exact player names when logging a match.")
+        } else {
+            contributions.take(8).forEach { contribution ->
+                Card {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(Modifier.weight(1f)) {
+                            Text(contribution.name, fontWeight = FontWeight.SemiBold)
+                            Text("Recorded contribution matches: ${contribution.appearancesWithContribution}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("G ${contribution.goals} · A ${contribution.assists}", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
         Text("TACTICAL EVENT PATTERNS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("These counts use only the event tags you manually add when recording a match. They are not detected automatically.", style = MaterialTheme.typography.bodySmall)
         Card {
@@ -858,11 +877,13 @@ fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd:
 }
 
 @Composable
-fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
+fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
     var result by remember { mutableStateOf("Loss") }
     var scored by remember { mutableStateOf("0") }
     var conceded by remember { mutableStateOf("0") }
     var note by remember { mutableStateOf("") }
+    var scorersText by remember { mutableStateOf("") }
+    var assistsText by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Record a match") },
@@ -875,6 +896,10 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
                 }
                 OutlinedTextField(scored, { scored = it.filter(Char::isDigit).take(2) }, label = { Text("Goals scored") })
                 OutlinedTextField(conceded, { conceded = it.filter(Char::isDigit).take(2) }, label = { Text("Goals conceded") })
+                Text("Optional player contributions — enter exact squad names, separated by commas. Repeat a name for multiple goals/assists.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(scorersText, { scorersText = it }, label = { Text("Goal scorers") })
+                OutlinedTextField(assistsText, { assistsText = it }, label = { Text("Assists") })
+                Text("Squad: " + players.joinToString(", ") { it.name }, style = MaterialTheme.typography.bodySmall)
                 Text("Optional tactical event tags (tap only what actually happened):", style = MaterialTheme.typography.bodySmall)
                 val eventTags = listOf("[COUNTER]", "[HIGH PRESS]", "[MIDFIELD LOST]", "[MISSED CHANCE]", "[GK ERROR]", "[DEFENSIVE ERROR]", "[SET PIECE]")
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -896,7 +921,15 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
         confirmButton = { TextButton(onClick = {
             val a = scored.toIntOrNull()
             val b = conceded.toIntOrNull()
-            if (a != null && b != null) onAdd(Match(result, a, b, note.trim()))
+            if (a != null && b != null && a >= 0 && b >= 0) {
+                val squadNames = players.map { it.name }
+                fun resolveNames(raw: String): List<String> = raw.split(",").map { it.trim() }
+                    .filter { entered -> entered.isNotBlank() && squadNames.any { it.equals(entered, ignoreCase = true) } }
+                    .map { entered -> squadNames.first { it.equals(entered, ignoreCase = true) } }
+                val scorers = resolveNames(scorersText)
+                val assists = resolveNames(assistsText)
+                onAdd(Match(result, a, b, note.trim(), scorers, assists))
+            }
         }) { Text("Save match") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
@@ -1014,7 +1047,11 @@ fun loadMatches(raw: String): List<Match> = runCatching {
     val array = JSONArray(raw)
     (0 until array.length()).map { i ->
         val o = array.getJSONObject(i)
-        Match(o.optString("result"), o.optInt("scored"), o.optInt("conceded"), o.optString("note"))
+        Match(
+            o.optString("result"), o.optInt("scored"), o.optInt("conceded"), o.optString("note"),
+            o.optJSONArray("scorers")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) } } ?: emptyList(),
+            o.optJSONArray("assists")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) } } ?: emptyList()
+        )
     }
 }.getOrDefault(emptyList())
 
@@ -1154,6 +1191,26 @@ fun squadBalanceAdvice(players: List<Player>): List<String> {
     if (advice.size == 1) advice += "Your entered position mix has basic coverage. Compare individual attributes and role fit before choosing the XI."
     advice += "Depth counts use the natural positions you entered; they do not judge player quality or official DLS squad rules."
     return advice
+}
+
+data class PlayerContribution(val name: String, val goals: Int, val assists: Int, val appearancesWithContribution: Int)
+
+fun playerContributionStats(matches: List<Match>): List<PlayerContribution> {
+    val contributions = linkedMapOf<String, Triple<Int, Int, Int>>()
+    matches.forEach { match ->
+        (match.scorers + match.assists).distinctBy { it.lowercase() }.forEach { name ->
+            val key = name.lowercase()
+            val current = contributions[key] ?: Triple(0, 0, 0)
+            val goals = match.scorers.count { it.equals(name, true) }
+            val assists = match.assists.count { it.equals(name, true) }
+            contributions[key] = Triple(current.first + goals, current.second + assists, current.third + 1)
+        }
+    }
+    return contributions.map { (key, values) ->
+        val displayName = matches.asSequence().flatMap { (it.scorers + it.assists).asSequence() }
+            .firstOrNull { it.equals(key, true) } ?: key
+        PlayerContribution(displayName, values.first, values.second, values.third)
+    }.sortedWith(compareByDescending<PlayerContribution> { it.goals + it.assists }.thenByDescending { it.goals }.thenBy { it.name })
 }
 
 fun tacticalEventInsights(matches: List<Match>): List<String> {
