@@ -66,5 +66,8 @@ Match logging optionally accepts goal scorers and assists using exact squad name
 
 After ten matches, the Performance Centre also compares each player's recorded goals and assists in the latest five matches against the previous five. This is a limited contribution trend, not a complete performance rating: appearances, minutes, defensive actions and chance creation are not inferred.
 
+## Management dashboard (development branch)
+The Manager tab provides a local resource ledger for user-confirmed coins, gems, available coaches and unclaimed gifts; a coaching recommendation approval/dismissal queue; and a local decision history. Resource values are timestamped manual snapshots, not live account data. Approving a recommendation records the user's intention to test it; it does not execute actions inside DLS. The current resource ledger and decision history are stored locally in app preferences and are not yet included in JSON backup export.
+
 ## Standalone DLS connection
 DLS Coach AI is designed to run independently on the phone. It does not require ChatGPT, an OpenAI account, an external AI assistant or cloud inference for its core features. The current connection to DLS is passive Android screen capture with local ML Kit OCR, using the Android permission prompt. It reads visible text only at this stage; it does not yet identify gameplay events or control the game. No official public DLS gameplay API/SDK has been verified. Any deeper integration would require documented authorisation from First Touch Games. The app will not use bots, input injection, game-memory access, reverse engineering, private endpoints or traffic interception.
