@@ -50,6 +50,7 @@ data class Player(
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
 data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String)
+data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,6 +105,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var showOcrDialog by remember { mutableStateOf(false) }
     var ocrBusy by remember { mutableStateOf(false) }
     var ocrText by remember { mutableStateOf(prefs.getString("last_squad_ocr", "") ?: "") }
+    var ocrDrafts by remember { mutableStateOf<List<OcrPlayerDraft>>(emptyList()) }
     var ocrError by remember { mutableStateOf("") }
 
     LaunchedEffect(sharedImageUris) {
@@ -127,6 +129,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     scannedTexts.add("IMAGE ${index + 1}\n${result.text}")
                 }
                 ocrText = scannedTexts.joinToString("\n\n")
+                ocrDrafts = parseOcrPlayerDrafts(ocrText)
                 prefs.edit().putString("last_squad_ocr", ocrText).apply()
                 showOcrDialog = true
             } catch (error: Exception) {
@@ -194,6 +197,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 recognizer.process(image)
                     .addOnSuccessListener { result ->
                         ocrText = result.text
+                        ocrDrafts = parseOcrPlayerDrafts(ocrText)
                         prefs.edit().putString("last_squad_ocr", ocrText).apply()
                         showOcrDialog = true
                         ocrBusy = false
@@ -295,6 +299,32 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 text = {
                     Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("On-device text recognition completed. Check every name and number against your screenshot. OCR can misread small text; this result has NOT been saved as player records.", style = MaterialTheme.typography.bodySmall)
+                        Text("POSSIBLE PLAYER DRAFTS", fontWeight = FontWeight.Bold)
+                        if (ocrDrafts.isEmpty()) {
+                            Text("No clear 'player name + rating' lines were detected. Nothing will be added automatically. Check the extracted text below or enter players manually.", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("These are suggestions only. Confirm each name and rating against the screenshot. Position and card attributes remain unknown until you edit the player.", style = MaterialTheme.typography.bodySmall)
+                            ocrDrafts.forEach { draft ->
+                                Card {
+                                    Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(draft.name, fontWeight = FontWeight.SemiBold)
+                                            Text("Possible OVR: ${draft.rating} · Position unknown", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        val alreadyExists = players.any { it.name.equals(draft.name, ignoreCase = true) }
+                                        TextButton(
+                                            enabled = !alreadyExists,
+                                            onClick = {
+                                                players = players + Player(draft.name, "UNK", draft.rating)
+                                                ocrDrafts = ocrDrafts.filterNot { it == draft }
+                                            }
+                                        ) { Text(if (alreadyExists) "In squad" else "Add") }
+                                    }
+                                }
+                            }
+                        }
+                        Divider()
+                        Text("EXTRACTED TEXT", fontWeight = FontWeight.Bold)
                         Text(if (ocrText.isBlank()) "No readable text found. Try a sharper, uncropped screenshot." else ocrText)
                     }
                 },
@@ -671,6 +701,24 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
         }) { Text("Save match") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+}
+
+fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
+    val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9]?[0-9])$")
+    val ignored = setOf("overall rating", "rating", "speed", "acceleration", "stamina", "strength", "control", "passing", "shooting", "tackling", "goalkeeping", "height", "weight", "player")
+    return raw.lineSequence()
+        .map { it.trim().replace(Regex("\\s+"), " ") }
+        .mapNotNull { line ->
+            val match = ratingAtEnd.matchEntire(line) ?: return@mapNotNull null
+            val name = match.groupValues[1].trim().trim('-', ':', '|', '•')
+            val rating = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            if (name.lowercase() in ignored || name.count { it.isLetter() } < 2) return@mapNotNull null
+            if (name.any { it.isDigit() }) return@mapNotNull null
+            OcrPlayerDraft(name, rating, line)
+        }
+        .distinctBy { it.name.lowercase() }
+        .take(30)
+        .toList()
 }
 
 fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String): String =
