@@ -654,6 +654,18 @@ fun formationSlots(formation: String): List<String> = when (formation) {
 }
 
 fun roleScore(p: Player, role: String): Int {
+    if (p.position == "UNK") return -1000
+    if (!p.statsKnown) {
+        val positionFit = when {
+            p.position == role -> 12
+            role == "ST" && p.position == "CF" || role == "CF" && p.position == "ST" -> 7
+            role in listOf("CM", "CDM", "CAM") && p.position in listOf("CM", "CDM", "CAM") -> 5
+            role in listOf("LW", "RW") && p.position in listOf("LM", "RM", "LW", "RW") -> 4
+            role in listOf("LB", "RB") && p.position in listOf("LB", "RB", "LM", "RM") -> 3
+            else -> -15
+        }
+        return (p.rating + positionFit).coerceIn(0, 100)
+    }
     val weighted = when (role) {
         "GK" -> p.gkr * 0.55 + p.gkh * 0.45
         "CB" -> p.tac * 0.30 + p.str * 0.25 + p.spe * 0.15 + p.sta * 0.12 + p.pas * 0.10 + p.acc * 0.08
@@ -692,7 +704,7 @@ fun optimiseLineup(players: List<Player>, formation: String): List<LineupSlot> {
 
 fun benchRecommendations(players: List<Player>, formation: String): List<Player> {
     val starters = optimiseLineup(players, formation).mapNotNull { it.player }.toSet()
-    return players.filter { it !in starters && it.position != "UNK" && it.position != "GK" }
+    return players.filter { it !in starters && it.position != "UNK" }
         .sortedWith(compareByDescending<Player> { it.rating }.thenBy { it.name })
         .take(7)
 }
