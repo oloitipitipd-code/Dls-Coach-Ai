@@ -86,6 +86,13 @@ This audit therefore does not recommend AccessibilityService, UI tapping, overla
 3. First Touch Games Support, [Why have I been blocked from playing DLS?](https://support.ftgames.com/hc/en-us/articles/360008904718-Why-have-I-been-blocked-from-playing-DLS). FTG explains its fair-play stance and warns about modified APKs, external hacks, exploits and interference with normal progression/gameplay.
 4. First Touch Games Support, [How do I backup/restore/transfer my save data?](https://support.ftgames.com/hc/en-us/articles/214387685-How-do-I-backup-restore-transfer-my-save-data). FTG describes supported profile linking for save protection; this is not a third-party API for account control.
 
+
+### Prototype implementation update — 11 November 2026
+
+The development branch now contains an initial `LiveSquadIntelligence` text-analysis prototype. It classifies a small set of visible screen labels and parses lines ending in a plausible overall rating only when the text indicates a squad or player-profile context. It persists candidate names/ratings separately and exposes a review inbox in Game Link. The user must explicitly confirm before candidates are appended to the local squad; imported positions are set to unknown and attributes are left unverified. Four JVM tests cover squad parsing, unknown-screen rejection, duplicate/attribute filtering and settings classification.
+
+This does **not** yet provide visual card detection, reliable position/attribute extraction, resource/gift tracking, development-change detection or live tactical analysis. The parser is a conservative proof of concept; real-device OCR accuracy and performance are not yet verified. This work is on `feature/real-account-integration-audit`; `main` is preserved.
+
 ## Release gate
 
 Do not describe DLS Coach AI as having direct account access or autonomous account management unless First Touch Games provides documented authorisation and a supported interface, and the integration passes security, privacy and real-device tests. Until then, describe it accurately as a **local-first DLS companion with user-authorised passive screen capture, on-device OCR, squad/tactical analysis and user-confirmed management records**.
