@@ -884,6 +884,7 @@ fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) 
     var note by remember { mutableStateOf("") }
     var scorersText by remember { mutableStateOf("") }
     var assistsText by remember { mutableStateOf("") }
+    var contributionError by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Record a match") },
@@ -899,6 +900,7 @@ fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) 
                 Text("Optional player contributions — enter exact squad names, separated by commas. Repeat a name for multiple goals/assists.", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(scorersText, { scorersText = it }, label = { Text("Goal scorers") })
                 OutlinedTextField(assistsText, { assistsText = it }, label = { Text("Assists") })
+                if (contributionError.isNotBlank()) Text(contributionError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 Text("Squad: " + players.joinToString(", ") { it.name }, style = MaterialTheme.typography.bodySmall)
                 Text("Optional tactical event tags (tap only what actually happened):", style = MaterialTheme.typography.bodySmall)
                 val eventTags = listOf("[COUNTER]", "[HIGH PRESS]", "[MIDFIELD LOST]", "[MISSED CHANCE]", "[GK ERROR]", "[DEFENSIVE ERROR]", "[SET PIECE]")
@@ -926,9 +928,15 @@ fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) 
                 fun resolveNames(raw: String): List<String> = raw.split(",").map { it.trim() }
                     .filter { entered -> entered.isNotBlank() && squadNames.any { it.equals(entered, ignoreCase = true) } }
                     .map { entered -> squadNames.first { it.equals(entered, ignoreCase = true) } }
+                val enteredScorers = scorersText.split(",").map { it.trim() }.filter(String::isNotBlank)
+                val enteredAssists = assistsText.split(",").map { it.trim() }.filter(String::isNotBlank)
                 val scorers = resolveNames(scorersText)
                 val assists = resolveNames(assistsText)
-                onAdd(Match(result, a, b, note.trim(), scorers, assists))
+                if (scorers.size != enteredScorers.size || assists.size != enteredAssists.size) {
+                    contributionError = "One or more names do not match your squad. Check spelling or leave that field blank."
+                } else {
+                    onAdd(Match(result, a, b, note.trim(), scorers, assists))
+                }
             }
         }) { Text("Save match") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
