@@ -171,7 +171,10 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         captureStatus = "Stopping capture…"
     }
     var players by remember {
-        mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
+        mutableStateOf(loadStoredPlayers(
+            raw = prefs.getString("players", null),
+            hasStoredValue = prefs.contains("players")
+        ))
     }
     var matches by remember { mutableStateOf(loadMatches(prefs.getString("matches", "[]") ?: "[]")) }
     var progressEntries by remember { mutableStateOf(loadProgress(prefs.getString("player_progress", "[]") ?: "[]")) }
@@ -1049,17 +1052,30 @@ fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
     require(root.optInt("schemaVersion", -1) in 1..3) { "Unsupported backup version." }
-    val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
-    val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
-    require(players.isNotEmpty()) { "The backup contains no readable player records." }
+    require(root.optJSONArray("players") != null) { "The backup is missing its player list." }
+    require(root.optJSONArray("matches") != null) { "The backup is missing its match list." }
+    val players = loadPlayers(root.optJSONArray("players").toString())
+    val matches = loadMatches(root.optJSONArray("matches").toString())
+    val progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]")
+    val formation = root.optString("formation", "5-3-2")
+    val supportedFormations = setOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
+    require(formation in supportedFormations) { "The backup contains an unsupported formation." }
+    require(players.size <= 100) { "The backup contains too many player records." }
+    require(matches.size <= 10000) { "The backup contains too many match records." }
     return CoachBackup(
         players = players,
         matches = matches,
-        progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]"),
-        formation = root.optString("formation", "5-3-2"),
+        progress = progress,
+        formation = formation,
         style = root.optString("style", "Aggressive attack + compact defence"),
         managerData = root.optJSONObject("managerData")?.toString() ?: "{}"
     )
+}
+
+/** Preserves an intentionally empty squad instead of silently reseeding it on every launch. */
+fun loadStoredPlayers(raw: String?, hasStoredValue: Boolean): List<Player> {
+    if (!hasStoredValue) return initialSquad()
+    return loadPlayers(raw ?: "[]")
 }
 
 fun initialSquad(): List<Player> = listOf(
@@ -1149,6 +1165,7 @@ fun formationSlots(formation: String): List<String> = when (formation) {
     "3-5-2" -> listOf("GK", "CB", "CB", "CB", "LM", "CM", "CDM", "CM", "RM", "ST", "ST")
     "4-4-2" -> listOf("GK", "LB", "CB", "CB", "RB", "LM", "CM", "CM", "RM", "ST", "ST")
     "4-3-3" -> listOf("GK", "LB", "CB", "CB", "RB", "CM", "CDM", "CM", "LW", "ST", "RW")
+    "4-1-2-1-2" -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "CM", "CAM", "ST", "ST")
     else -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CDM", "LW", "CAM", "RW", "ST")
 }
 
