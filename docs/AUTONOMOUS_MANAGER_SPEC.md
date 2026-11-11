@@ -292,3 +292,50 @@ The user wants help deciding when to bring the goalkeeper out to catch or claim 
 - Evaluate claim-versus-stay recommendations separately for catches, punches and defensive challenges. Measure decision precision, unsafe rush recommendations, missed claim opportunities, alert timing and false alerts.
 - Validate on held-out footage and on the target Infinix Smart 9; monitor processing latency, heat, battery and game responsiveness.
 - Keep keeper-decision alerts local and private in the companion overlay by default. Never modify the game, automate input, intercept traffic or claim guaranteed catches.
+
+## Additional team-performance intelligence — proactive recommendations
+
+The following complementary capabilities are added to help the user's team perform more consistently. All live advice is observational and the user remains responsible for every game input.
+
+### 1. Stamina-aware substitutions and role protection
+- Track visible stamina indicators only when they can be read reliably; otherwise allow the user to enter substitutions and stamina observations after the match.
+- Identify players whose reduced stamina appears to coincide with slower recovery, late defensive tracking or weaker forward support.
+- Recommend a substitution candidate by role fit, confirmed squad data, tactical need and remaining match context; explain what the change improves and what it may weaken.
+- Do not assume a universal stamina threshold or guarantee that a substitution will improve the result. Do not make substitutions automatically.
+
+### 2. Transition and counterattack protection
+- When possession changes, assess whether the team is exposed to an immediate counterattack, which central or wide lane is most vulnerable, and whether enough players remain goal-side.
+- Recommend a quick recovery shape, protecting the central route first when the visible threat is central, or covering the exposed flank when the threat is wide.
+- In possession, assess whether an aggressive forward pass or cross leaves a dangerous space behind the ball. Prefer a safer support option when the visible counterattack risk is high.
+- Track whether goals/chances conceded followed a turnover, an exposed flank, a central gap or a failed recovery, but classify causes as confirmed only when footage supports them.
+
+### 3. Pressing and defensive-block intelligence
+- Identify a plausible pressing trigger from visible play, such as a receiver facing their own goal, a loose/heavy touch, a backward pass or a receiver isolated near the sideline, only where the event is clearly observable.
+- Recommend coordinated pressure on the ball carrier while protecting the nearest dangerous passing lane; avoid recommending an isolated press that opens a direct route to goal.
+- Recommend holding shape, narrowing, dropping or pressing higher based on the visible opponent threat and the user's tactical preference.
+- Treat pressing triggers as suggestions, not certainty about opponent intent or game mechanics.
+
+### 4. Set-piece planning for both teams
+- For the user's attacking corners and free kicks, identify visible target zones, potential runners and short-pass alternatives when the scene is clear.
+- For defending corners and free kicks, identify dangerous opponents, likely delivery zones and areas needing cover; integrate goalkeeper claim-versus-stay guidance.
+- Record set-piece outcomes separately from open-play events and recommend changes only after repeated evidence.
+- Do not assume a particular set-piece routine or control sequence unless verified in DLS 26.
+
+### 5. Match-state tactical adaptation
+- Consider scoreline, match time, current formation, visible opponent pressure and available substitutes when suggesting whether to protect a lead, seek an equaliser or chase a goal.
+- When leading, prioritise compactness and safe possession without abandoning all attacking outlets. When chasing, suggest measured attacking changes while warning about the defensive space they expose.
+- Do not infer the match clock or score when it is not clearly visible; ask the user to confirm uncertain match context.
+
+### 6. Post-match diagnosis and controlled experiments
+- Produce a concise report separating goals conceded/scored, shots, chances, turnovers, pass patterns, crosses, corners, aerial duels, goalkeeper decisions and substitutions where observable or user-confirmed.
+- Identify the two or three strongest evidence-supported performance problems rather than listing every possible weakness.
+- Suggest one major tactical adjustment at a time where practical, record the change, and compare a sufficient set of subsequent matches against the prior baseline.
+- Track mode, opponent strength only if a defensible measure is available, formation, lineup and match context so comparisons are not misleading.
+- Show sample sizes, unknown events and uncertainty. Do not claim a tactic caused improvement from a single win or loss.
+
+### 7. Reliability and user control
+- Provide a simple coaching intensity setting (quiet, balanced, urgent) and allow separate control of voice, visual alerts and overlay guidance.
+- Include a short pre-match checklist: formation/role balance, defensive cover, set-piece plan and available substitutes.
+- Include a post-match correction screen so the user can correct OCR, event labels, match result and inaccurate recommendations.
+- Keep all recommendations advisory, explain the evidence briefly, and provide a way to dismiss or report an incorrect alert.
+- Validate each feature separately on labelled DLS 26 footage and the target Infinix Smart 9. Monitor false alerts, latency, heat, battery and game responsiveness; disable or downgrade unreliable features.
