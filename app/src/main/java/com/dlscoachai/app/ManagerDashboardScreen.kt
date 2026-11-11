@@ -139,27 +139,47 @@ private fun saveManagerDecisions(items: List<ManagerDecision>): String = JSONArr
 }.toString()
 
 /** Serialises the local manager ledger for the user's explicit JSON backup. */
-fun exportManagerData(prefs: SharedPreferences): String = JSONObject()
-    .put("coins", prefs.getString("manager_coins", "") ?: "")
-    .put("gems", prefs.getString("manager_gems", "") ?: "")
-    .put("coaches", prefs.getString("manager_coaches", "") ?: "")
-    .put("gifts", prefs.getString("manager_gifts", "") ?: "")
-    .put("resourcesTime", prefs.getLong("manager_resources_time", 0L))
-    .put("decisions", JSONArray(prefs.getString("manager_decisions", "[]") ?: "[]"))
-    .toString()
+fun exportManagerData(prefs: SharedPreferences): String {
+    val decisions = sanitiseManagerDecisions(prefs.getString("manager_decisions", "[]") ?: "[]")
+    return JSONObject()
+        .put("coins", prefs.getString("manager_coins", "") ?: "")
+        .put("gems", prefs.getString("manager_gems", "") ?: "")
+        .put("coaches", prefs.getString("manager_coaches", "") ?: "")
+        .put("gifts", prefs.getString("manager_gifts", "") ?: "")
+        .put("resourcesTime", prefs.getLong("manager_resources_time", 0L).coerceAtLeast(0L))
+        .put("decisions", decisions)
+        .toString()
+}
 
 /** Restores only known manager fields; malformed optional fields fall back safely. */
 fun restoreManagerData(prefs: SharedPreferences, raw: String) {
     runCatching {
         val data = JSONObject(raw)
-        val decisions = data.optJSONArray("decisions") ?: JSONArray()
+        val decisions = sanitiseManagerDecisions(data.optJSONArray("decisions")?.toString() ?: "[]")
         prefs.edit()
-            .putString("manager_coins", data.optString("coins", "").filter(Char::isDigit))
-            .putString("manager_gems", data.optString("gems", "").filter(Char::isDigit))
-            .putString("manager_coaches", data.optString("coaches", "").filter(Char::isDigit))
-            .putString("manager_gifts", data.optString("gifts", "").filter(Char::isDigit))
+            .putString("manager_coins", data.optString("coins", "").filter(Char::isDigit).take(12))
+            .putString("manager_gems", data.optString("gems", "").filter(Char::isDigit).take(12))
+            .putString("manager_coaches", data.optString("coaches", "").filter(Char::isDigit).take(6))
+            .putString("manager_gifts", data.optString("gifts", "").filter(Char::isDigit).take(6))
             .putLong("manager_resources_time", data.optLong("resourcesTime", 0L).coerceAtLeast(0L))
             .putString("manager_decisions", decisions.toString())
             .apply()
     }
 }
+
+private fun sanitiseManagerDecisions(raw: String): JSONArray = runCatching {
+    val source = JSONArray(raw)
+    JSONArray().apply {
+        for (i in 0 until minOf(source.length(), 100)) {
+            val item = source.optJSONObject(i) ?: continue
+            val text = item.optString("text").trim().take(300)
+            val status = item.optString("status")
+            if (text.isNotBlank() && status in setOf("APPROVED", "DISMISSED", "TESTED")) {
+                put(JSONObject()
+                    .put("text", text)
+                    .put("status", status)
+                    .put("time", item.optLong("time", 0L).coerceAtLeast(0L)))
+            }
+        }
+    }
+}.getOrDefault(JSONArray())
