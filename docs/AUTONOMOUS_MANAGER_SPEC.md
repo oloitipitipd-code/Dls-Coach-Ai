@@ -230,3 +230,40 @@ The user wants DLS Coach AI to help their team create useful passing options in 
 - Measure attacking support recommendations separately: useful passing-option agreement, successful progression, possession losses and counterattacks conceded.
 - Evaluate on held-out match clips and the target Infinix Smart 9. Monitor latency, battery, heat and game responsiveness; reduce sampling or pause if performance is affected.
 - All arrows, lane markers and tactical labels remain in the user's private companion overlay/local data by default. No game input automation, player movement, game modification, traffic interception or opponent-device display.
+
+## Aerial duels, corners, crosses and heading intelligence — explicit user requirement
+
+The user wants help winning more defensive aerial balls (especially when opponents take corners or cross) and creating better opportunities for their own players to score headers from crosses and set pieces. This is observational coaching only; the user performs all player switching, movement, marking, jumping, crossing and shooting inputs.
+
+### Defending opponent corners and crosses
+- Recognise when the opponent is preparing/taking a corner or delivering a cross, and qualify the scene before giving advice.
+- Track the ball's visible flight, landing area, attacking runners and user's defenders across multiple frames where the video quality allows.
+- Identify the most plausible defender to challenge for the ball using visible position relative to the ball's projected landing zone, goal-side position, proximity, approach path and nearby opponent pressure. Do not infer hidden height, strength, jumping or heading attributes from appearance.
+- Recommend protecting the most dangerous near-post, central or far-post zone only when the ball trajectory and goal orientation are sufficiently clear.
+- Alert the user to track an unmarked opponent, protect the central six-yard/goal area, challenge for a reachable aerial ball, or clear the ball when a safe clearance opportunity is visible.
+- For a defensive header, distinguish a genuine reachable challenge from a situation where a defender is poorly positioned or likely to miss the ball. If uncertain, recommend protecting goal-side space rather than an unsupported jump/challenge.
+- After the first defensive contact, assess whether the ball is cleared, remains dangerous, or falls to an opponent. Recommend a second-ball recovery position and avoid claiming the danger has ended while the ball remains live.
+- Never claim a particular defender will win the header; phrase it as the best visible candidate and show confidence.
+
+### Creating the user's own crossing and heading chances
+- During possession, detect a plausible crossing opportunity from wide areas and assess the positions and movement of visible teammates and defenders in the penalty area.
+- Identify potential receivers (e.g. near-post run, central run, far-post run, or edge-of-area support) using visible trajectories and space, without inventing player identities or hidden attributes.
+- Recommend a cross only when a teammate appears to have a plausible route to the delivery area and the opposing defenders/goalkeeper do not clearly dominate that space. Otherwise suggest retaining possession, switching play, or making a safer pass.
+- Show a private overlay guide for the likely delivery zone and receiver run only when ball, goal, teammate and opponent tracking are sufficiently reliable. Distinguish the intended cross destination from the actual ball trajectory; it is an estimate, not an exact control instruction.
+- Assess whether the visible crossing lane is blocked, whether the receiver is marked, whether the far post is open, and whether a cut-back or ground pass appears safer than an aerial cross.
+- Recommend a suitable visible target zone (near post, central area, far post, or cut-back zone) rather than promising that a particular player will score.
+- For corners taken by the user's team, identify visible unmarked runs and crowded zones and suggest a delivery area only when the scene supports it. For defending corners, prioritise marking/covering dangerous runners and protecting the goal area.
+
+### Aerial and crossing performance analysis
+- Log only confirmed or user-corrected events: opponent corners, opponent crosses, defensive aerial challenges, clearances, second-ball recoveries, user's crosses, header attempts, shots on target, goals and unknown outcomes.
+- Report separate measures: defensive first-contact rate, opponent second-ball recoveries/conceded chances, user's cross completion, header attempts, headers on target and goals from headers. Do not conflate these metrics.
+- Compare recommendations with observed outcomes over multiple matches. Allow the user to correct uncertain event labels and show sample counts; do not claim improvement from a tiny or ambiguous sample.
+- Use confirmed squad attributes/roles and user-provided player data to inform between-match aerial-role suggestions only when those attributes are available and verified. Do not assume that a taller-looking player has better heading ability or that a particular player has a hidden aerial stat.
+- Suggest training/development priorities only when DLS 26 provides a verified relevant attribute or training mechanism; do not invent a heading upgrade mechanic or promise attribute gains.
+
+### Validation, privacy and fair-play safeguards
+- Use multi-frame ball-flight and player tracking; aerial motion blur, camera perspective, overlapping players and replays can make landing zones and first contact uncertain.
+- If the ball flight, team identity, landing zone or player positions cannot be tracked reliably, show **AERIAL PLAY UNCLEAR — PROTECT THE GOAL AREA** or suppress the recommendation.
+- Evaluate defensive corner/cross detection and attacking cross/header guidance separately on labelled DLS 26 footage, including precision, recall, first-contact classification, target-zone agreement, false alerts and timing.
+- Validate on held-out clips and the target Infinix Smart 9. Monitor latency, battery, heat and game responsiveness; reduce sampling or pause if performance is affected.
+- Keep all aerial target markers, crossing guides and defensive alerts in the user's private companion overlay/local data by default. Never automate gameplay input, modify DLS, intercept traffic or display guidance on the opponent's device.
