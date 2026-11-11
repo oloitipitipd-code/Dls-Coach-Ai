@@ -381,3 +381,32 @@ The user wants DLS Coach AI to help develop existing players (including players 
 - Add a Recruitment screen with squad gaps, ranked targets, opponent-player watchlist, comparison and approval checklist.
 - Keep all player data local by default and provide export/backup. Clearly label OCR-extracted but unconfirmed information.
 - Test calculations and UI using manually verified squad screenshots and user-confirmed transfer/development records before claiming the feature works.
+
+## Gradual long-term player maximisation — clarified requirement
+
+The user explicitly wants the system to develop suitable existing players gradually over many coaching sessions, continuing until each reaches the maximum permanent development allowed by that player's card/game rules, rather than replacing every player below 90 overall.
+
+### Verified game-mechanic distinction
+- First Touch Games' official support guidance says coaches are used to develop players and randomly select a player to permanently upgrade.
+- Form Boosts are temporary attribute increases for a limited number of matches; they must never be recorded as permanent development.
+- The app must inspect the current in-game Coaches screen and the player's actual card/attribute details where possible. Do not hard-code an assumed universal maximum rating, +10 ceiling, coach yield, rarity effect, or training allocation without current official evidence or user-provided in-game confirmation.
+- Standard coach selection may be random, so the app must not promise that using a coach will upgrade a particular chosen player. It should track the actual recipient and result after the user applies a coach.
+- If the current DLS version offers a targeted/special coach for an eligible card, the app may recommend it based on the on-screen rules, but must not assume all players/cards are eligible.
+
+### Long-term development workflow
+1. Establish a baseline for every player from user-confirmed card rating and visible attributes.
+2. Rank development candidates by role value, squad importance, starting rating, confirmed attributes, development progress and the team's tactical needs. A player rated 80+ may be worth retaining and developing; rating alone must not determine the decision.
+3. Recommend the appropriate in-game coach category using the current coach descriptions and verified attribute effects. Check the in-game cost and available coach resources before advising the user to spend.
+4. Before the user applies a coach, show the likely eligible recipients/risks and clearly state if standard coach selection is random. Require the user to make the in-game decision.
+5. After training, ask for or import a screenshot of the actual recipient and updated attributes/rating. Record the actual result, coach used and resource cost; never assume the intended player received the upgrade.
+6. Repeat over time, maintaining a per-player development ledger and showing progress from baseline, recent changes, remaining visible development opportunities and any uncertainty about the maximum.
+7. Stop recommending permanent training when the game indicates the player has reached their maximum development potential or relevant attributes are capped. Mark the player as **fully developed** only when supported by in-game evidence.
+8. Compare continued development cost/opportunity with recruitment alternatives, but do not discard a useful player merely because the player has not yet reached 90 overall.
+9. Keep Form Boosts in a separate temporary-performance ledger with expiry/matches remaining. Never mix temporary boosts into permanent rating progression or claim they move a player toward their permanent maximum.
+10. Provide squad-wide progress reports: players in development, permanent rating/attribute changes, coaches/resources used, fully developed players, and players better prioritised for recruitment.
+
+### Limits and user approval
+- DLS Coach AI may plan, track, calculate, compare, remind and recommend gradual training.
+- It must not automatically spend coins/gems, consume coaches, release players or operate the game. The user must perform and approve every in-game training or recruitment action.
+- Do not promise a specific final rating or timeline. Development outcomes depend on the player's actual game limits, coach selection and game version.
+- Re-check current official DLS guidance and the user's live in-game screens when mechanics change.
