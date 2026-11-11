@@ -631,6 +631,9 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                     performanceInsights(matches).forEach { insight ->
                         Text("• $insight", color = MaterialTheme.colorScheme.tertiary)
                     }
+                    compareRecentPeriods(matches).forEach { insight ->
+                        Text("• $insight", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }
@@ -1129,6 +1132,30 @@ fun squadBalanceAdvice(players: List<Player>): List<String> {
     if (advice.size == 1) advice += "Your entered position mix has basic coverage. Compare individual attributes and role fit before choosing the XI."
     advice += "Depth counts use the natural positions you entered; they do not judge player quality or official DLS squad rules."
     return advice
+}
+
+fun compareRecentPeriods(matches: List<Match>): List<String> {
+    if (matches.size < 6) return listOf("Log at least six matches to compare the latest five with the previous five.")
+    val recent = matches.take(5)
+    val previous = matches.drop(5).take(5)
+    fun averageScored(period: List<Match>) = period.sumOf { it.scored }.toDouble() / period.size
+    fun averageConceded(period: List<Match>) = period.sumOf { it.conceded }.toDouble() / period.size
+    fun winRate(period: List<Match>) = period.count { it.result.equals("Win", true) } * 100.0 / period.size
+    val scoredChange = averageScored(recent) - averageScored(previous)
+    val concededChange = averageConceded(recent) - averageConceded(previous)
+    val winChange = winRate(recent) - winRate(previous)
+    fun signed(value: Double) = (if (value > 0) "+" else "") + "%.1f".format(value)
+    val result = mutableListOf<String>()
+    result += "Latest five vs previous five: goals scored per match ${signed(scoredChange)}, goals conceded per match ${signed(concededChange)}, win rate ${signed(winChange)} percentage points."
+    when {
+        concededChange <= -0.4 && scoredChange >= -0.2 -> result += "Trend signal: defensive results improved without a meaningful drop in scoring."
+        scoredChange >= 0.4 && concededChange <= 0.2 -> result += "Trend signal: attacking output improved while goals conceded stayed broadly stable."
+        concededChange >= 0.4 -> result += "Trend signal: defensive results worsened; inspect match evidence before changing personnel or formation."
+        scoredChange <= -0.4 -> result += "Trend signal: attacking output fell; review chance creation and shot quality."
+        else -> result += "Trend signal: no large change in these basic results. Continue logging and test one change at a time."
+    }
+    result += "This comparison describes results only; it cannot identify the cause of a change."
+    return result
 }
 
 fun performanceInsights(matches: List<Match>): List<String> {
