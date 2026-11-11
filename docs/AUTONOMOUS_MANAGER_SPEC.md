@@ -517,3 +517,13 @@ Do not call a squad optimised or complete until:
 
 ### Current product truth
 The current Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, basic development priorities, on-device OCR text extraction for review, and sharing match evidence/report text. OCR does not yet create player records automatically. Match footage is shared for external review; the app does not perform in-app video analysis. Live screen capture, live computer vision, private tactical overlay, voice coaching, automated structured squad extraction, persistent coach-outcome development ledger and recruitment-market integration are not implemented in the inspected app version. Do not describe any of those as working until code is added and a successful build plus device testing confirms it.
+
+
+## Optional external integrations — version 1.4.0
+
+External services are optional helpers, never dependencies for core coaching:
+- **GitHub (read-only):** a user-triggered request to the public GitHub Actions API checks the latest workflow run for this public repository and displays its title, status/conclusion and short commit SHA. The user can open the repository or workflow page. No GitHub authentication token is requested or stored. This does not install updates or grant repository write access.
+- **ChatGPT (manual share):** the user can generate a coaching report and invoke Android's standard text-share chooser. The user chooses ChatGPT, if installed, and completes the share. The app must not silently transmit reports, screenshots, player records or other personal data.
+- **Offline-first:** squad records, match history, tactics and local coaching features must continue to work if internet access is unavailable or either optional service is absent. The GitHub status check requires internet; ChatGPT report review requires an installed receiving app and an explicit user share action.
+- **Credentials:** never embed GitHub tokens, OpenAI API keys or account passwords in the APK. Do not request credentials for the current read-only GitHub check or manual ChatGPT share.
+- **Future integrations:** any authenticated GitHub workflow, cloud AI analysis or automatic synchronisation requires a separate, secure design, clear data disclosure, cost disclosure where relevant, and explicit user opt-in. Do not imply these future functions exist until implemented and tested.
