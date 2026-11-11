@@ -42,3 +42,5 @@ The tactical pattern view focuses on the latest five logged matches and, once te
 
 ## Player match contributions
 Match logging optionally accepts goal scorers and assists using exact squad names, comma-separated. Repeat a name when a player scores or assists more than once in a match. The Performance Centre aggregates only these manually entered contributions; players without recorded contributions are not assumed to have played or performed poorly. Older match records remain compatible and simply have no scorer/assist data.
+
+After ten matches, the Performance Centre also compares each player's recorded goals and assists in the latest five matches against the previous five. This is a limited contribution trend, not a complete performance rating: appearances, minutes, defensive actions and chance creation are not inferred.
