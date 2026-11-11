@@ -39,3 +39,6 @@ The Performance Centre supports dated, manually verified player-card snapshots (
 When recording a match, users can optionally tag observed events such as opponent counter-attacks, high-press situations, midfield losses, missed chances, goalkeeper errors, defensive errors and set pieces. The Performance Centre counts only these explicit manual tags and highlights the most frequent categories. This is a review aid, not automatic event recognition; inspect the relevant match footage and notes before changing tactics.
 
 The tactical pattern view focuses on the latest five logged matches and, once ten matches are available, compares them with the preceding five. It reports changes in manually tagged event counts only; it does not infer that a tag caused a win or loss. Fewer than ten matches are never presented as a complete five-versus-five comparison.
+
+## Player match contributions
+Match logging optionally accepts goal scorers and assists using exact squad names, comma-separated. Repeat a name when a player scores or assists more than once in a match. The Performance Centre aggregates only these manually entered contributions; players without recorded contributions are not assumed to have played or performed poorly. Older match records remain compatible and simply have no scorer/assist data.
