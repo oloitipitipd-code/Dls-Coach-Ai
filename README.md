@@ -1,5 +1,5 @@
 # Dls-Coach-Ai
-Android companion app for Dream League Soccer 2026.
+Standalone Android companion for Dream League Soccer 2026. Core features run inside this app and do not require ChatGPT, an OpenAI account, or cloud AI.
 
 ## Build
 A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`.
@@ -11,13 +11,13 @@ A debug APK is built by the GitHub Actions workflow in `.github/workflows/androi
 - Role-fit starting XI estimates using confirmed positions and attributes only
 - Backup export and restore
 - Share squad screenshots to the app; on-device OCR creates reviewable player drafts before the user confirms any database changes
-- User-authorised Android screen-capture foundation for live sessions, with a visible foreground notification and stop control
+- User-authorised Android screen capture with local on-device ML Kit text recognition, visible foreground notification and stop control
 
 ## Live capture status and limitations
-The capture foundation requests Android MediaProjection permission, creates a foreground capture service, scales frames to a maximum long edge of 960 pixels, and closes sampled frames immediately. Capture is local-only: this stage does not save or upload frames, record audio, recognise gameplay events, generate live tactical advice, or control DLS. Capture can be stopped from the app or its persistent Android notification. Real-device behaviour, frame rate, heat, battery use and game responsiveness still require testing on the target phone.
+The live companion requests Android MediaProjection permission, creates a foreground capture service, scales frames to a maximum long edge of 960 pixels, and samples them locally. Bundled ML Kit OCR reads visible text on-device at a limited sampling rate; raw frames are not saved or uploaded and audio is not captured. OCR is not yet gameplay-event recognition and does not generate validated tactical alerts or control DLS. Capture can be stopped from the app or its persistent Android notification. Real-device behaviour, OCR accuracy, frame rate, heat, battery use and game responsiveness still require testing on the target phone.
 
 ## Important limitations
-OCR is fallible. Extracted player names and ratings are drafts and require user review; positions and attributes are not inferred when they are not clearly visible. Match footage sharing is not equivalent to in-app video analysis. The app does not modify DLS, automate gameplay, spend in-game currency, or guarantee wins.
+OCR is fallible. Extracted player names and ratings are drafts and require user review; positions and attributes are not inferred when they are not clearly visible. Full match-video event analysis is not yet implemented. The app does not modify DLS, automate gameplay, spend in-game currency, or guarantee wins.
 
 ## Autonomous manager roadmap
 The requirements, privacy rules, workflow, core screens, and staged delivery plan are documented in [AUTONOMOUS_MANAGER_SPEC.md](docs/AUTONOMOUS_MANAGER_SPEC.md).
@@ -44,3 +44,6 @@ The tactical pattern view focuses on the latest five logged matches and, once te
 Match logging optionally accepts goal scorers and assists using exact squad names, comma-separated. Repeat a name when a player scores or assists more than once in a match. The Performance Centre aggregates only these manually entered contributions; players without recorded contributions are not assumed to have played or performed poorly. Older match records remain compatible and simply have no scorer/assist data.
 
 After ten matches, the Performance Centre also compares each player's recorded goals and assists in the latest five matches against the previous five. This is a limited contribution trend, not a complete performance rating: appearances, minutes, defensive actions and chance creation are not inferred.
+
+## Standalone DLS connection
+DLS Coach AI is designed to run independently on the phone. It does not require ChatGPT, an OpenAI account, an external AI assistant or cloud inference for its core features. The current connection to DLS is passive Android screen capture with local ML Kit OCR, using the Android permission prompt. It reads visible text only at this stage; it does not yet identify gameplay events or control the game. No official public DLS gameplay API/SDK has been verified. Any deeper integration would require documented authorisation from First Touch Games. The app will not use bots, input injection, game-memory access, reverse engineering, private endpoints or traffic interception.
