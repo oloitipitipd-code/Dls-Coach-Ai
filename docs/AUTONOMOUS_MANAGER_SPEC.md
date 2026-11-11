@@ -339,3 +339,45 @@ The following complementary capabilities are added to help the user's team perfo
 - Include a post-match correction screen so the user can correct OCR, event labels, match result and inaccurate recommendations.
 - Keep all recommendations advisory, explain the evidence briefly, and provide a way to dismiss or report an incorrect alert.
 - Validate each feature separately on labelled DLS 26 footage and the target Infinix Smart 9. Monitor false alerts, latency, heat, battery and game responsiveness; disable or downgrade unreliable features.
+
+## Player development, recruitment and transfer intelligence — explicit user requirement
+
+The user wants DLS Coach AI to help develop existing players (including players rated 80+ toward 90+), identify better players outside the squad from visible opponent evidence, and manage recruitment priorities. The assistant must distinguish recommendations and tracking from actions it cannot legitimately perform in DLS 26.
+
+### Existing-player development
+- Maintain a confirmed player profile with current rating, position, visible attributes, role suitability, development history and user-confirmed availability.
+- Identify players rated 80–89 who may be worth investing in, but assess role-relevant attributes and squad value rather than rating alone.
+- Recommend a development priority for each player using only verified DLS 26 development/coaching mechanics and confirmed player data.
+- Track before/after ratings and attributes, development resources spent when the user records them, and observed performance changes.
+- Estimate a possible development pathway only when supported by verified game rules and recorded player progression. Never promise an 80+ player will reach 90+, invent a training outcome, or claim an attribute can be upgraded if the game does not support it.
+- Identify when further investment appears inefficient compared with recruiting a better player, explaining the evidence and uncertainty.
+- The user must approve and carry out every in-game development action unless a legitimate, documented DLS feature provides an explicit supported integration. Do not automate taps or gameplay.
+
+### Recruitment and transfer shortlist
+- Identify squad gaps from the confirmed lineup, tactical system, substitutes, injuries/availability if applicable, and recurring match weaknesses.
+- Build a prioritised recruitment shortlist by position and role (e.g. centre-back with recovery pace and defensive ability, defensive midfielder with tackling and stamina, forward with finishing and movement), using verified visible attributes.
+- Compare candidates by role fit, rating, relevant attributes, team balance, expected development potential only where evidence exists, and the user's available in-game coins/gems when supplied.
+- Track transfer-market candidates and player availability only from screenshots or other user-provided, permitted evidence. Do not claim continuous access to the live DLS transfer market unless a legitimate supported source/integration is actually available.
+- For an opponent's player who is not in the user's squad, record the identity, position, visible rating/attributes and observed performance only when these are clearly visible or user-confirmed. Distinguish an opponent's best observed performer from a generally best player.
+- Build a watchlist of opponent players and external recruitment targets with evidence, date/match context and confidence. Do not infer hidden ratings, attributes, contract status, price or availability.
+- Recommend a purchase only when it addresses a defined squad need and is affordable based on confirmed resource information. Explain which current player would lose a place and how the signing changes the squad.
+
+### Purchase and development approval gates
+- The app may autonomously analyse, rank, track, remind and prepare a recommended transfer/development plan.
+- It must not spend coins or gems, buy/sign/release players, confirm purchases, consume coaches/resources, or execute development actions without the user's explicit approval for that specific action.
+- Never store, request or use the user's game password, session token or other credentials. Do not automate game controls, modify game files, intercept game traffic or bypass game protections.
+- If DLS 26 offers no official supported API/integration for transfers or training, present the recommendation and a clear manual checklist; do not claim that the app can buy or upgrade players inside the game.
+- Provide a purchase confirmation summary before any future supported transaction: player, position, rating/attributes, cost, available balance after purchase, squad impact and reason. Require explicit confirmation and provide a cancel option.
+- Maintain a transaction/development history only from verified user-confirmed actions; never claim an in-game action succeeded merely because the user viewed a recommendation.
+
+### Recruitment and development learning
+- Evaluate signings after multiple recorded matches using role performance, team balance, match context and the problems the signing was intended to solve.
+- Compare development investments using recorded before/after values and resources spent. Separate rating increase from actual match contribution.
+- Track whether recruited players improve the intended outcome (e.g. fewer goals conceded, better midfield recovery, more chances created) while acknowledging opponent and match variability.
+- Display sample counts, missing data and uncertainty. Do not label an opponent player as a priority target based on one isolated event.
+
+### Validation and user experience
+- Add a Player Development screen with confirmed profiles, development priorities, before/after history and resource notes.
+- Add a Recruitment screen with squad gaps, ranked targets, opponent-player watchlist, comparison and approval checklist.
+- Keep all player data local by default and provide export/backup. Clearly label OCR-extracted but unconfirmed information.
+- Test calculations and UI using manually verified squad screenshots and user-confirmed transfer/development records before claiming the feature works.
