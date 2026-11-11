@@ -23,7 +23,22 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Player(val name: String, val position: String, val rating: Int)
+data class Player(
+    val name: String,
+    val position: String,
+    val rating: Int,
+    val spe: Int = 50,
+    val acc: Int = 50,
+    val sta: Int = 50,
+    val str: Int = 50,
+    val con: Int = 50,
+    val pas: Int = 50,
+    val sho: Int = 50,
+    val tac: Int = 50,
+    val gkr: Int = 50,
+    val gkh: Int = 50
+)
+data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
 
 class MainActivity : ComponentActivity() {
@@ -274,22 +289,52 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
     val conceded = matches.sumOf { it.conceded }
     val scored = matches.sumOf { it.scored }
     val losses = matches.count { it.result.equals("Loss", true) }
+    val lineup = remember(players, formation) { optimiseLineup(players, formation) }
+    val tips = remember(formation, style) { tacticalAdvice(formation, style) }
     Page(modifier) {
-        Text("ChatGPT Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Generate a coaching brief using the information you have entered.")
+        Text("Performance Centre", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Evidence-led squad selection and tactical recommendations. Results depend on player data and how you execute in matches.")
         Card {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Your data snapshot", fontWeight = FontWeight.Bold)
-                Text("Squad players: ${players.size}")
+                Text("TEAM PERFORMANCE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Players entered: ${players.size}")
                 Text("Matches recorded: ${matches.size}")
                 Text("Goals scored: $scored  |  Goals conceded: $conceded")
                 Text("Recorded losses: $losses")
+                if (matches.isNotEmpty()) {
+                    Text("Goal difference: ${scored - conceded}")
+                    Text(if (conceded > scored) "Priority: improve defensive protection and chance prevention." else "Review both chance creation and defensive consistency.")
+                }
+            }
+        }
+        Text("RECOMMENDED STARTING XI", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (players.isEmpty()) {
+            Text("Add your players and their actual card attributes in Squad to generate a role-based XI.")
+        } else {
+            lineup.forEach { slot ->
+                Card {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(slot.position, fontWeight = FontWeight.Bold, modifier = Modifier.width(54.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(slot.player?.name ?: "No suitable player entered", fontWeight = FontWeight.SemiBold)
+                            if (slot.player != null) Text("OVR ${slot.player.rating} · role fit ${slot.score}/100", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            if (players.size < 11) Text("You have entered ${players.size} players. Add at least 11 for a complete XI.")
+        }
+        Text("TACTICAL GAME PLAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        tips.forEach { tip -> Text("• $tip") }
+        Card {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Your current setup", fontWeight = FontWeight.Bold)
                 Text("Formation: $formation")
                 Text("Style: $style")
             }
         }
-        Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("Share coaching report") }
-        Text("Tip: add the full squad, then share screenshots or match recordings separately for a more reliable review.")
+        Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("Generate and share full coaching report") }
+        Text("Important: this app recommends selection and training priorities. It cannot directly change player attributes, control the game or guarantee wins.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -298,24 +343,45 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf("") }
     var position by remember { mutableStateOf("CM") }
     var rating by remember { mutableStateOf("90") }
+    val statNames = listOf("SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC", "GKR", "GKH")
+    val stats = remember { mutableStateMapOf<String, String>().apply { statNames.forEach { put(it, "70") } } }
     val positions = listOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add squad player") },
+        title = { Text("Add player and card stats") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
                 OutlinedTextField(name, { name = it }, label = { Text("Player name") }, singleLine = true)
                 OutlinedTextField(rating, { rating = it.filter(Char::isDigit).take(3) }, label = { Text("Overall rating") }, singleLine = true)
-                Text("Position")
+                Text("Natural position")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     positions.forEach { p -> FilterChip(selected = position == p, onClick = { position = p }, label = { Text(p) }) }
+                }
+                Text("Enter the numbers exactly as shown on the in-game player card (1–100). For a goalkeeper, prioritise GKR and GKH.", style = MaterialTheme.typography.bodySmall)
+                statNames.forEach { stat ->
+                    OutlinedTextField(
+                        value = stats[stat] ?: "70",
+                        onValueChange = { stats[stat] = it.filter(Char::isDigit).take(3) },
+                        label = { Text(stat) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         },
         confirmButton = { TextButton(onClick = {
             val value = rating.toIntOrNull()
-            if (name.isNotBlank() && value != null && value in 1..100) onAdd(Player(name.trim(), position, value))
-        }) { Text("Save") } },
+            val numbers = statNames.map { stats[it]?.toIntOrNull() }
+            if (name.isNotBlank() && value != null && value in 1..100 && numbers.all { it != null && it in 1..100 }) {
+                onAdd(Player(name.trim(), position, value,
+                    numbers[0]!!, numbers[1]!!, numbers[2]!!, numbers[3]!!, numbers[4]!!,
+                    numbers[5]!!, numbers[6]!!, numbers[7]!!, numbers[8]!!, numbers[9]!!
+                ))
+            }
+        }) { Text("Save player") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
@@ -351,14 +417,26 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
 }
 
 fun savePlayers(players: List<Player>): String = JSONArray().apply {
-    players.forEach { put(JSONObject().put("name", it.name).put("position", it.position).put("rating", it.rating)) }
+    players.forEach { p ->
+        put(JSONObject()
+            .put("name", p.name).put("position", p.position).put("rating", p.rating)
+            .put("spe", p.spe).put("acc", p.acc).put("sta", p.sta).put("str", p.str)
+            .put("con", p.con).put("pas", p.pas).put("sho", p.sho).put("tac", p.tac)
+            .put("gkr", p.gkr).put("gkh", p.gkh))
+    }
 }.toString()
 
 fun loadPlayers(raw: String): List<Player> = runCatching {
     val array = JSONArray(raw)
     (0 until array.length()).map { i ->
         val o = array.getJSONObject(i)
-        Player(o.optString("name"), o.optString("position"), o.optInt("rating"))
+        val rating = o.optInt("rating", 50)
+        Player(
+            o.optString("name"), o.optString("position"), rating,
+            o.optInt("spe", rating), o.optInt("acc", rating), o.optInt("sta", rating),
+            o.optInt("str", rating), o.optInt("con", rating), o.optInt("pas", rating),
+            o.optInt("sho", rating), o.optInt("tac", rating), o.optInt("gkr", rating), o.optInt("gkh", rating)
+        )
     }
 }.getOrDefault(emptyList())
 
@@ -374,8 +452,91 @@ fun loadMatches(raw: String): List<Match> = runCatching {
     }
 }.getOrDefault(emptyList())
 
+fun formationSlots(formation: String): List<String> = when (formation) {
+    "5-3-2" -> listOf("GK", "LB", "CB", "CB", "CB", "RB", "CM", "CM", "CM", "ST", "ST")
+    "3-5-2" -> listOf("GK", "CB", "CB", "CB", "LM", "CM", "CDM", "CM", "RM", "ST", "ST")
+    "4-4-2" -> listOf("GK", "LB", "CB", "CB", "RB", "LM", "CM", "CM", "RM", "ST", "ST")
+    "4-3-3" -> listOf("GK", "LB", "CB", "CB", "RB", "CM", "CDM", "CM", "LW", "ST", "RW")
+    else -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CDM", "LW", "CAM", "RW", "ST")
+}
+
+fun roleScore(p: Player, role: String): Int {
+    val weighted = when (role) {
+        "GK" -> p.gkr * 0.55 + p.gkh * 0.45
+        "CB" -> p.tac * 0.30 + p.str * 0.25 + p.spe * 0.15 + p.sta * 0.12 + p.pas * 0.10 + p.acc * 0.08
+        "LB", "RB" -> p.spe * 0.18 + p.acc * 0.15 + p.sta * 0.16 + p.tac * 0.20 + p.pas * 0.12 + p.str * 0.08 + p.con * 0.06 + p.sho * 0.05
+        "CDM" -> p.tac * 0.25 + p.str * 0.15 + p.sta * 0.15 + p.pas * 0.18 + p.con * 0.10 + p.spe * 0.07 + p.acc * 0.05 + p.sho * 0.05
+        "CM" -> p.pas * 0.22 + p.sta * 0.16 + p.con * 0.17 + p.tac * 0.12 + p.spe * 0.08 + p.acc * 0.08 + p.str * 0.07 + p.sho * 0.10
+        "CAM" -> p.pas * 0.20 + p.con * 0.20 + p.sho * 0.18 + p.acc * 0.10 + p.spe * 0.10 + p.sta * 0.08 + p.str * 0.04 + p.tac * 0.10
+        "LW", "RW", "LM", "RM" -> p.spe * 0.18 + p.acc * 0.17 + p.con * 0.18 + p.sho * 0.18 + p.pas * 0.12 + p.sta * 0.08 + p.tac * 0.03 + p.str * 0.03 + p.rating * 0.03
+        "ST", "CF" -> p.sho * 0.28 + p.spe * 0.18 + p.acc * 0.15 + p.con * 0.15 + p.str * 0.10 + p.sta * 0.06 + p.pas * 0.08
+        else -> p.rating.toDouble()
+    }
+    val natural = when {
+        p.position == role -> 12
+        role == "ST" && p.position == "CF" || role == "CF" && p.position == "ST" -> 8
+        role in listOf("LB", "RB") && p.position in listOf("LM", "RM") -> 2
+        role in listOf("LM", "RM") && p.position in listOf("LB", "RB", "LW", "RW") -> 5
+        role in listOf("LW", "RW") && p.position in listOf("LM", "RM", "ST", "CF") -> 4
+        role in listOf("CM", "CDM", "CAM") && p.position in listOf("CM", "CDM", "CAM") -> 5
+        role == "CB" && p.position in listOf("LB", "RB", "CDM") -> 0
+        else -> -18
+    }
+    val goalkeeperPenalty = if (p.position == "GK" && role != "GK") 60 else 0
+    return (weighted + natural - goalkeeperPenalty).toInt().coerceIn(0, 100)
+}
+
+fun optimiseLineup(players: List<Player>, formation: String): List<LineupSlot> {
+    val available = players.toMutableList()
+    return formationSlots(formation).map { role ->
+        val chosen = available.maxByOrNull { roleScore(it, role) }
+        if (chosen != null) available.remove(chosen)
+        LineupSlot(role, chosen, chosen?.let { roleScore(it, role) } ?: 0)
+    }
+}
+
+fun tacticalAdvice(formation: String, style: String): List<String> {
+    val base = mutableListOf<String>()
+    when (formation) {
+        "5-3-2" -> {
+            base += "Use the three centre-backs as a compact central block; do not drag all three toward the ball."
+            base += "Wing-backs provide width, but avoid sending both forward at the same time. Keep one side protected."
+            base += "Use one central midfielder as the defensive screen and the other two to support progression and second balls."
+            base += "Two strikers should offer a passing option and a forward run; avoid forcing a through ball when the lane is closed."
+        }
+        "4-3-3" -> {
+            base += "Keep a holding midfielder behind the ball when full-backs advance."
+            base += "Wingers stretch the defence; use cutbacks and low-risk passes rather than sprinting into every defender."
+            base += "Press with the nearest forward while midfield blocks the central passing lane."
+        }
+        "3-5-2" -> {
+            base += "Protect the wide channels: wing-backs must recover when possession is lost."
+            base += "Keep one midfielder disciplined in front of the back three."
+            base += "Use two forwards for combinations, not only direct long balls."
+        }
+        "4-4-2" -> {
+            base += "Keep the two central midfielders close enough to protect the centre."
+            base += "Wide midfielders track opposing full-backs and counter into space."
+            base += "One striker can come short while the other attacks the space behind."
+        }
+        else -> {
+            base += "Keep two midfielders connected to the defence; do not let both attack beyond the ball."
+            base += "Use the wide attackers to stretch the pitch and the attacking midfielder between the lines."
+            base += "When possession is lost, recover the central lane before chasing the ball."
+        }
+    }
+    base += "Defending: jockey and contain first, use a standing tackle when the opponent exposes the ball, and slide only when the angle and timing are safe."
+    base += "Attacking: scan before receiving, use short passes to draw pressure, then accelerate into space; choose shots when the shooting lane is clear."
+    if (style.contains("Aggressive", true) || style.contains("High press", true)) {
+        base += "Because your style is aggressive, avoid an uncontrolled all-out press: trigger pressure near the ball and keep cover behind the pressing player."
+    }
+    return base
+}
+
 fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String): String {
-    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") { "- ${it.name}: ${it.position}, OVR ${it.rating}" }
+    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") {
+        "- ${it.name}: ${it.position}, OVR ${it.rating}; SPE ${it.spe}, ACC ${it.acc}, STA ${it.sta}, STR ${it.str}, CON ${it.con}, PAS ${it.pas}, SHO ${it.sho}, TAC ${it.tac}, GKR ${it.gkr}, GKH ${it.gkh}"
+    }
     val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { "- ${it.result} ${it.scored}-${it.conceded}: ${it.note}" }
     return """DLS COACH AI — COACHING REVIEW
 Game: Dream League Soccer 2026
