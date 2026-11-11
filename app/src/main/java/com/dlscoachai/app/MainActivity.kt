@@ -1015,7 +1015,7 @@ fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) 
 }
 
 fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
-    val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9]?[0-9])$")
+    val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9][0-9]?)$")
     val ignored = setOf("overall rating", "rating", "speed", "acceleration", "stamina", "strength", "control", "passing", "shooting", "tackling", "goalkeeping", "height", "weight", "player")
     return raw.lineSequence()
         .map { it.trim().replace(Regex("\\s+"), " ") }
