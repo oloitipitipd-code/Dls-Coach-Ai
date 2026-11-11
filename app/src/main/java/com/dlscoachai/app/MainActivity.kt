@@ -3,6 +3,9 @@ package com.dlscoachai.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -61,6 +64,10 @@ fun DlsCoachApp() {
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
     var showMatchDialog by remember { mutableStateOf(false) }
+    var showOcrDialog by remember { mutableStateOf(false) }
+    var ocrBusy by remember { mutableStateOf(false) }
+    var ocrText by remember { mutableStateOf(prefs.getString("last_squad_ocr", "") ?: "") }
+    var ocrError by remember { mutableStateOf("") }
 
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
@@ -81,13 +88,28 @@ fun DlsCoachApp() {
 
     val squadImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
-            val share = Intent(Intent.ACTION_SEND).apply {
-                type = context.contentResolver.getType(uri) ?: "image/*"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "Analyse this DLS 26 squad screenshot. Read only visible player names, positions, ratings and attributes. Recommend the strongest starting XI for aggressive attacking with strong defence, prioritising role fit, tackling, strength, speed, stamina, passing and finishing. Explain any uncertainty and do not guess unreadable stats.")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            ocrBusy = true
+            ocrError = ""
+            try {
+                val image = InputImage.fromFilePath(context, uri)
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                recognizer.process(image)
+                    .addOnSuccessListener { result ->
+                        ocrText = result.text
+                        prefs.edit().putString("last_squad_ocr", ocrText).apply()
+                        showOcrDialog = true
+                        ocrBusy = false
+                        recognizer.close()
+                    }
+                    .addOnFailureListener { error ->
+                        ocrError = error.localizedMessage ?: "Text recognition failed. Try a clearer screenshot."
+                        ocrBusy = false
+                        recognizer.close()
+                    }
+            } catch (error: Exception) {
+                ocrError = error.localizedMessage ?: "Could not open this image."
+                ocrBusy = false
             }
-            context.startActivity(Intent.createChooser(share, "Send squad screenshot for AI review"))
         }
     }
 
@@ -155,6 +177,27 @@ fun DlsCoachApp() {
                 onAdd = { match -> matches = listOf(match) + matches; showMatchDialog = false }
             )
         }
+        if (showOcrDialog) {
+            AlertDialog(
+                onDismissRequest = { showOcrDialog = false },
+                title = { Text("Screenshot text — review before entering players") },
+                text = {
+                    Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("On-device text recognition completed. Check every name and number against your screenshot. OCR can misread small text; this result has NOT been saved as player records.", style = MaterialTheme.typography.bodySmall)
+                        Text(if (ocrText.isBlank()) "No readable text found. Try a sharper, uncropped screenshot." else ocrText)
+                    }
+                },
+                confirmButton = { TextButton(onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, "DLS Coach AI — extracted squad text")
+                        putExtra(Intent.EXTRA_TEXT, ocrText)
+                    }
+                    context.startActivity(Intent.createChooser(send, "Share extracted text"))
+                }) { Text("Share text") } },
+                dismissButton = { TextButton(onClick = { showOcrDialog = false }) { Text("Close") } }
+            )
+        }
     }
 }
 
@@ -215,10 +258,10 @@ fun SquadScreen(
             Button(onClick = onAdd) { Text("Add player") }
         }
         OutlinedButton(onClick = onUploadScreenshot, modifier = Modifier.fillMaxWidth()) {
-            Text("Upload squad screenshot for AI review")
+            Text("Upload squad screenshot — scan inside app")
         }
         Text(
-            "Choose a screenshot of your DLS 26 team. Android will let you share it with ChatGPT for image-based analysis. This app does not analyse images by itself.",
+            "Choose a DLS 26 screenshot. The app reads visible text on your phone using on-device OCR, then shows the result for you to verify. It does not guess unreadable attributes or automatically create player records yet.",
             style = MaterialTheme.typography.bodySmall
         )
         if (players.isEmpty()) {
