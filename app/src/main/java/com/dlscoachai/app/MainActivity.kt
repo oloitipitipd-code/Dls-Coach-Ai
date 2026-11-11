@@ -1040,7 +1040,15 @@ fun loadProgress(raw: String): List<PlayerProgress> = runCatching {
 }.getOrDefault(emptyList())
 
 fun saveMatches(matches: List<Match>): String = JSONArray().apply {
-    matches.forEach { put(JSONObject().put("result", it.result).put("scored", it.scored).put("conceded", it.conceded).put("note", it.note)) }
+    matches.forEach { match ->
+        put(JSONObject()
+            .put("result", match.result)
+            .put("scored", match.scored)
+            .put("conceded", match.conceded)
+            .put("note", match.note)
+            .put("scorers", JSONArray(match.scorers))
+            .put("assists", JSONArray(match.assists)))
+    }
 }.toString()
 
 fun loadMatches(raw: String): List<Match> = runCatching {
