@@ -1166,14 +1166,33 @@ fun tacticalEventInsights(matches: List<Match>): List<String> {
         "[DEFENSIVE ERROR]" to "Defensive errors",
         "[SET PIECE]" to "Set-piece situations"
     )
-    val counts = categories.mapNotNull { (tag, label) ->
-        val count = matches.sumOf { match ->
-            Regex(Regex.escape(tag), RegexOption.IGNORE_CASE).findAll(match.note).count()
+    if (matches.isEmpty()) return listOf("No matches logged yet. Record matches and tag observed events.")
+    val recent = matches.take(5)
+    val previous = matches.drop(5).take(5)
+    fun count(period: List<Match>, tag: String) = period.sumOf { match ->
+        Regex(Regex.escape(tag), RegexOption.IGNORE_CASE).findAll(match.note).count()
+    }
+    val insights = categories.mapNotNull { (tag, label) ->
+        val recentCount = count(recent, tag)
+        val previousCount = count(previous, tag)
+        if (recentCount == 0 && previousCount == 0) null
+        else {
+            val trend = when {
+                previous.isEmpty() -> "no earlier five-match comparison"
+                recentCount > previousCount -> "up from $previousCount in the previous five"
+                recentCount < previousCount -> "down from $previousCount in the previous five"
+                else -> "unchanged from the previous five"
+            }
+            Triple(label, recentCount, trend)
         }
-        if (count > 0) label to count else null
-    }.sortedByDescending { it.second }
-    if (counts.isEmpty()) return listOf("No tagged tactical events yet. When logging a match, tag only events you personally observed.")
-    return counts.take(4).map { (label, count) -> "$label: $count logged event(s). Review the match notes and footage before changing tactics." }
+    }.sortedWith(compareByDescending<Triple<String, Int, String>> { it.second }.thenBy { it.first })
+    if (insights.isEmpty()) return listOf("No tagged tactical events in the latest five matches. Tag only events you personally observed.")
+    val output = insights.take(4).map { (label, recentCount, trend) ->
+        "$label: $recentCount in the latest ${recent.size} match(es); $trend. Review notes and footage before changing tactics."
+    }.toMutableList()
+    if (previous.isEmpty()) output += "Log at least six matches to begin comparing recent event patterns with an earlier sample."
+    output += "These are counts of manually tagged notes, not automatic detection or proof of the cause of a result."
+    return output
 }
 
 fun compareRecentPeriods(matches: List<Match>): List<String> {
