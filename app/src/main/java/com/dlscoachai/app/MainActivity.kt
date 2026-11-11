@@ -1168,7 +1168,7 @@ fun tacticalEventInsights(matches: List<Match>): List<String> {
     )
     if (matches.isEmpty()) return listOf("No matches logged yet. Record matches and tag observed events.")
     val recent = matches.take(5)
-    val previous = matches.drop(5).take(5)
+    val previous = if (matches.size >= 10) matches.drop(5).take(5) else emptyList()
     fun count(period: List<Match>, tag: String) = period.sumOf { match ->
         Regex(Regex.escape(tag), RegexOption.IGNORE_CASE).findAll(match.note).count()
     }
@@ -1190,7 +1190,7 @@ fun tacticalEventInsights(matches: List<Match>): List<String> {
     val output = insights.take(4).map { (label, recentCount, trend) ->
         "$label: $recentCount in the latest ${recent.size} match(es); $trend. Review notes and footage before changing tactics."
     }.toMutableList()
-    if (previous.isEmpty()) output += "Log at least six matches to begin comparing recent event patterns with an earlier sample."
+    if (previous.isEmpty()) output += "Log at least ten matches to compare the latest five with a complete previous five-match sample."
     output += "These are counts of manually tagged notes, not automatic detection or proof of the cause of a result."
     return output
 }
