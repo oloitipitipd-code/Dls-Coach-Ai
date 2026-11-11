@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.view.WindowManager
 
@@ -32,7 +33,7 @@ class LiveCaptureService : Service() {
     private var imageReader: ImageReader? = null
     private var workerThread: HandlerThread? = null
     private var frameCount = 0
-    private var lastNotificationFrames = 0
+    private var lastNotificationUpdateMs = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -77,8 +78,12 @@ class LiveCaptureService : Service() {
             val metrics = DisplayMetrics()
             @Suppress("DEPRECATION")
             (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(metrics)
-            val width = metrics.widthPixels.coerceAtLeast(1)
-            val height = metrics.heightPixels.coerceAtLeast(1)
+            // Keep capture lightweight on entry-level phones while preserving aspect ratio.
+            val sourceWidth = metrics.widthPixels.coerceAtLeast(1)
+            val sourceHeight = metrics.heightPixels.coerceAtLeast(1)
+            val scale = minOf(1f, 960f / maxOf(sourceWidth, sourceHeight).toFloat())
+            val width = (sourceWidth * scale).toInt().coerceAtLeast(1)
+            val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
             val density = metrics.densityDpi
 
             workerThread = HandlerThread("DlsCoachFrameSampler").also { it.start() }
@@ -89,10 +94,11 @@ class LiveCaptureService : Service() {
                     if (image != null) {
                         image.close()
                         frameCount++
-                        if (frameCount - lastNotificationFrames >= 30) {
-                            lastNotificationFrames = frameCount
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastNotificationUpdateMs >= 10_000L) {
+                            lastNotificationUpdateMs = now
                             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                                .notify(NOTIFICATION_ID, buildNotification("Capture active · $frameCount frames sampled"))
+                                .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount low-resolution frames sampled"))
                         }
                     }
                 }, handler)
@@ -159,8 +165,9 @@ class LiveCaptureService : Service() {
         imageReader?.setOnImageAvailableListener(null, null)
         imageReader?.close()
         imageReader = null
-        projection?.stop()
+        val activeProjection = projection
         projection = null
+        activeProjection?.stop()
         workerThread?.quitSafely()
         workerThread = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
