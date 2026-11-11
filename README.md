@@ -18,3 +18,10 @@ Version 1.1.0 adds on-device OCR for squad screenshots. The app displays extract
 The requirements, privacy rules, workflow, core screens, and staged delivery plan are documented in [AUTONOMOUS_MANAGER_SPEC.md](docs/AUTONOMOUS_MANAGER_SPEC.md).
 
 The intended design is English-only, evidence-led, and local-first. Screenshot extraction must be reviewed by the user before changing the squad database. Any future cloud AI or paid service must be opt-in and disclose its costs and data handling.
+
+## Squad-building rules
+- Recruitment threshold: 80+ overall, **only when the player materially benefits the current squad**.
+- Compare candidates against existing players by position, role-relevant attributes, squad weakness, depth and cost. Avoid unnecessary signings and save resources when there is no worthwhile upgrade.
+- Preferred long-term development target: 97+ permanent overall **where the specific player's actual DLS 26 development limit makes it achievable**. Never promise a rating or confuse temporary Form Boosts with permanent development.
+- Full recruitment, development, tactical and quality-assurance requirements are in [the final quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md#final-quality-squad-standard--recruitment-development-and-team-balance).
+
