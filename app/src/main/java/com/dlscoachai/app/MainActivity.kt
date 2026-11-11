@@ -637,6 +637,13 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                 }
             }
         }
+        Text("TACTICAL EVENT PATTERNS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("These counts use only the event tags you manually add when recording a match. They are not detected automatically.", style = MaterialTheme.typography.bodySmall)
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                tacticalEventInsights(matches).forEach { insight -> Text("• $insight") }
+            }
+        }
         Text("RECOMMENDED STARTING XI", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("Role-fit scores are coaching estimates based on the entered attributes and position, not official DLS formulas.", style = MaterialTheme.typography.bodySmall)
         if (players.isEmpty()) {
@@ -868,7 +875,22 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
                 }
                 OutlinedTextField(scored, { scored = it.filter(Char::isDigit).take(2) }, label = { Text("Goals scored") })
                 OutlinedTextField(conceded, { conceded = it.filter(Char::isDigit).take(2) }, label = { Text("Goals conceded") })
-                OutlinedTextField(note, { note = it }, label = { Text("What went wrong / well?") })
+                Text("Optional tactical event tags (tap only what actually happened):", style = MaterialTheme.typography.bodySmall)
+                val eventTags = listOf("[COUNTER]", "[HIGH PRESS]", "[MIDFIELD LOST]", "[MISSED CHANCE]", "[GK ERROR]", "[DEFENSIVE ERROR]", "[SET PIECE]")
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    eventTags.chunked(2).forEach { group ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            group.forEach { tag ->
+                                FilterChip(
+                                    selected = note.contains(tag, ignoreCase = true),
+                                    onClick = { note = if (note.contains(tag, ignoreCase = true)) note.replace(tag, "", ignoreCase = true).trim() else listOf(note.trim(), tag).filter { it.isNotBlank() }.joinToString(" ") },
+                                    label = { Text(tag.removePrefix("[").removeSuffix("]")) }
+                                )
+                            }
+                        }
+                    }
+                }
+                OutlinedTextField(note, { note = it }, label = { Text("Match notes / events") })
             }
         },
         confirmButton = { TextButton(onClick = {
@@ -1132,6 +1154,26 @@ fun squadBalanceAdvice(players: List<Player>): List<String> {
     if (advice.size == 1) advice += "Your entered position mix has basic coverage. Compare individual attributes and role fit before choosing the XI."
     advice += "Depth counts use the natural positions you entered; they do not judge player quality or official DLS squad rules."
     return advice
+}
+
+fun tacticalEventInsights(matches: List<Match>): List<String> {
+    val categories = linkedMapOf(
+        "[COUNTER]" to "Opponent counter-attacks",
+        "[HIGH PRESS]" to "High-press situations",
+        "[MIDFIELD LOST]" to "Midfield possession losses",
+        "[MISSED CHANCE]" to "Missed chances",
+        "[GK ERROR]" to "Goalkeeper errors",
+        "[DEFENSIVE ERROR]" to "Defensive errors",
+        "[SET PIECE]" to "Set-piece situations"
+    )
+    val counts = categories.mapNotNull { (tag, label) ->
+        val count = matches.sumOf { match ->
+            Regex(Regex.escape(tag), RegexOption.IGNORE_CASE).findAll(match.note).count()
+        }
+        if (count > 0) label to count else null
+    }.sortedByDescending { it.second }
+    if (counts.isEmpty()) return listOf("No tagged tactical events yet. When logging a match, tag only events you personally observed.")
+    return counts.take(4).map { (label, count) -> "$label: $count logged event(s). Review the match notes and footage before changing tactics." }
 }
 
 fun compareRecentPeriods(matches: List<Match>): List<String> {
