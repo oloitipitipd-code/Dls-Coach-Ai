@@ -44,6 +44,12 @@ The intended design is English-only, evidence-led, and local-first. Any future c
 - Compare candidates against existing players by position, role-relevant attributes, squad weakness, depth and cost. Avoid unnecessary signings and save resources when there is no worthwhile upgrade.
 - Preferred long-term development target: 97+ permanent overall **where the specific player's actual DLS 26 development limit makes it achievable**. Never promise a rating or confuse temporary Form Boosts with permanent development.
 - Full recruitment, development, tactical and quality-assurance requirements are in [the final quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md#final-quality-squad-standard--recruitment-development-and-team-balance).
+
+## Live squad intelligence prototype (development branch)
+The `feature/real-account-integration-audit` branch adds conservative local interpretation of OCR text from user-authorised screen capture. It classifies likely screen context (squad, player profile, transfers, settings, match or unknown), extracts possible player names and overall ratings only when squad/player context is detected, and places candidates in a review inbox. The user must confirm before candidates are added to the local squad. Imported positions remain unknown and attributes remain unverified. No DLS account data, private files or server-side inventory are accessed.
+
+This is an early text-parser prototype, not validated visual player-card recognition. It does not yet extract positions, individual attributes, resource balances, gifts or player-development changes. OCR accuracy and device impact require testing on real DLS screens on the target Infinix phone. The `main` branch remains unchanged by this prototype work.
+
 ## Engineering checks
 The CI workflow runs JVM unit tests for the capture-frame brightness helper before assembling the debug APK. These tests validate pixel-stride handling, row padding, invalid dimensions and short buffers; they do not replace real-device capture, battery, heat or game-performance testing.
 
