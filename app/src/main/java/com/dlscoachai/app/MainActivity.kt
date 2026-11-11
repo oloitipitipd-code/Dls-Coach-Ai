@@ -658,6 +658,23 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                 }
             }
         }
+        if (matches.size >= 10) {
+            Text("PLAYER FORM: LATEST FIVE VS PREVIOUS FIVE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            playerContributionTrends(matches).take(8).forEach { trend ->
+                val recentTotal = trend.recentGoals + trend.recentAssists
+                val previousTotal = trend.previousGoals + trend.previousAssists
+                val change = recentTotal - previousTotal
+                val direction = when {
+                    change > 0 -> "+$change contributions"
+                    change < 0 -> "$change contributions"
+                    else -> "unchanged"
+                }
+                Text("${trend.name}: recent G${trend.recentGoals}/A${trend.recentAssists}; previous G${trend.previousGoals}/A${trend.previousAssists} ($direction)", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("Form compares recorded goals and assists only; it is not a complete measure of a player's performance or minutes played.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("Log ten matches to compare each player's recorded goal/assist contributions across two five-match periods.", style = MaterialTheme.typography.bodySmall)
+        }
         Text("TACTICAL EVENT PATTERNS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("These counts use only the event tags you manually add when recording a match. They are not detected automatically.", style = MaterialTheme.typography.bodySmall)
         Card {
@@ -1229,6 +1246,33 @@ fun playerContributionStats(matches: List<Match>): List<PlayerContribution> {
             .firstOrNull { it.equals(key, true) } ?: key
         PlayerContribution(displayName, values.first, values.second, values.third)
     }.sortedWith(compareByDescending<PlayerContribution> { it.goals + it.assists }.thenByDescending { it.goals }.thenBy { it.name })
+}
+
+data class PlayerContributionTrend(
+    val name: String,
+    val recentGoals: Int,
+    val recentAssists: Int,
+    val previousGoals: Int,
+    val previousAssists: Int
+)
+
+fun playerContributionTrends(matches: List<Match>): List<PlayerContributionTrend> {
+    if (matches.size < 10) return emptyList()
+    val recent = matches.take(5)
+    val previous = matches.drop(5).take(5)
+    val names = (recent + previous).flatMap { it.scorers + it.assists }.distinctBy { it.lowercase() }
+    return names.map { name ->
+        PlayerContributionTrend(
+            name = name,
+            recentGoals = recent.sumOf { match -> match.scorers.count { it.equals(name, true) } },
+            recentAssists = recent.sumOf { match -> match.assists.count { it.equals(name, true) } },
+            previousGoals = previous.sumOf { match -> match.scorers.count { it.equals(name, true) } },
+            previousAssists = previous.sumOf { match -> match.assists.count { it.equals(name, true) } }
+        )
+    }.sortedWith(
+        compareByDescending<PlayerContributionTrend> { it.recentGoals + it.recentAssists }
+            .thenBy { it.name }
+    )
 }
 
 fun tacticalEventInsights(matches: List<Match>): List<String> {
