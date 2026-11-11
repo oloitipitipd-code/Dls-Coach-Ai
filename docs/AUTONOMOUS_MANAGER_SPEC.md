@@ -410,3 +410,17 @@ The user explicitly wants the system to develop suitable existing players gradua
 - It must not automatically spend coins/gems, consume coaches, release players or operate the game. The user must perform and approve every in-game training or recruitment action.
 - Do not promise a specific final rating or timeline. Development outcomes depend on the player's actual game limits, coach selection and game version.
 - Re-check current official DLS guidance and the user's live in-game screens when mechanics change.
+
+## 97+ permanent overall development target
+
+The user's squad-building target is **97+ permanent overall rating** for players selected as long-term development investments.
+
+- Treat 97+ as the preferred target, not a guaranteed outcome or a universal maximum.
+- Estimate feasibility from the player's confirmed original card rating and the current, verified DLS 26 development rules. A community DLS 26 guide reports a +10 permanent overall development ceiling (with an 86-rated Harry Kane reaching 96), but this is not confirmed by the official First Touch Games support article. Mark this ceiling as community-reported until verified in-game or by an official source.
+- If the reported +10 ceiling applies to the user's card, a base rating of at least 87 would be needed to reach 97 permanently. This is a conditional calculation, not a universal rule; card type, special-card rules and future game updates may differ.
+- Before recommending a player for a 97+ development pathway, inspect the actual card type, original rating, current permanent rating, visible attributes and in-game coach/development screen. Distinguish permanent overall rating from temporary Form Boost display.
+- Classify players as: **97+ pathway plausible**, **97+ pathway unverified**, or **97+ target not supported by current evidence**. Explain the reason and never imply certainty where the maximum is unknown.
+- Prioritise recruitment of players with a credible route to 97+ if they are not already in the squad. Do not waste development resources chasing an unsupported target; compare role fit and attribute needs as well as overall rating.
+- Track each player's permanent progress and stop when the in-game maximum is reached. Report the actual final rating, even if below 97, rather than falsifying or obscuring the result.
+- Official FTG guidance confirms that standard coaches randomly select a player for permanent upgrade and that Form Boosts are temporary. Source: https://support.ftgames.com/hc/en-us/articles/360003914778-How-do-I-develop-my-players
+- Community-reported DLS 26 +10 ceiling and example: https://dmairdls.com/blog/how-to-max-players-in-dls-26-coaches-form-boosts . Treat as secondary evidence, not official confirmation.
