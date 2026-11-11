@@ -122,8 +122,8 @@ class LiveCaptureService : Service() {
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(NOTIFICATION_ID, buildNotification("Capture active · frames are processed locally only"))
         } catch (error: Exception) {
-            setCaptureState(false, "Capture failed: ${error.localizedMessage ?: "unknown error"}")
             stopCapture()
+            setCaptureState(false, "Capture failed: ${error.localizedMessage ?: "unknown error"}")
             stopSelf()
         }
         return START_NOT_STICKY
