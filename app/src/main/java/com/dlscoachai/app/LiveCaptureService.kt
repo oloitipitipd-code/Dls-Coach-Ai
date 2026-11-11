@@ -21,6 +21,7 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import kotlin.math.roundToInt
 
 /**
  * User-authorised, local-only screen capture foundation.
@@ -34,6 +35,7 @@ class LiveCaptureService : Service() {
     private var workerThread: HandlerThread? = null
     private var frameCount = 0
     private var lastSampleMs = 0L
+    private var lastAverageBrightness = -1
     private var lastNotificationUpdateMs = 0L
     private val sampleIntervalMs = 1_000L
 
@@ -92,6 +94,7 @@ class LiveCaptureService : Service() {
 
             frameCount = 0
             lastSampleMs = 0L
+            lastAverageBrightness = -1
             lastNotificationUpdateMs = 0L
             workerThread = HandlerThread("DlsCoachFrameSampler").also { it.start() }
             val handler = Handler(workerThread!!.looper)
@@ -99,18 +102,23 @@ class LiveCaptureService : Service() {
                 reader.setOnImageAvailableListener({ source ->
                     val image = source.acquireLatestImage()
                     if (image != null) {
-                        // Always close the newest frame promptly, but count/process at most one sample per second.
-                        image.close()
-                        val now = SystemClock.elapsedRealtime()
-                        if (lastSampleMs == 0L || now - lastSampleMs >= sampleIntervalMs) {
-                            lastSampleMs = now
-                            frameCount++
-                        }
-                        if (now - lastNotificationUpdateMs >= 10_000L) {
-                            lastNotificationUpdateMs = now
-                            setCaptureState(true, "Capture active · 1 sample/second maximum")
-                            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                                .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount sampled frames (1/sec max)"))
+                        try {
+                            // Sample a small pixel grid at most once per second; never retain the frame.
+                            val now = SystemClock.elapsedRealtime()
+                            if (lastSampleMs == 0L || now - lastSampleMs >= sampleIntervalMs) {
+                                lastSampleMs = now
+                                lastAverageBrightness = measureAverageBrightness(image)
+                                frameCount++
+                                persistFrameDiagnostics(image.width, image.height)
+                            }
+                            if (now - lastNotificationUpdateMs >= 10_000L) {
+                                lastNotificationUpdateMs = now
+                                setCaptureState(true, "Capture active · local diagnostics only")
+                                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                                    .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount diagnostic samples"))
+                            }
+                        } finally {
+                            image.close()
                         }
                     }
                 }, handler)
@@ -172,6 +180,42 @@ class LiveCaptureService : Service() {
             .build()
     }
 
+
+
+    private fun measureAverageBrightness(image: android.media.Image): Int {
+        val plane = image.planes.firstOrNull() ?: return -1
+        val buffer = plane.buffer
+        val pixelStride = plane.pixelStride
+        val rowStride = plane.rowStride
+        if (pixelStride < 3 || image.width < 1 || image.height < 1) return -1
+        val steps = 24
+        var total = 0L
+        var count = 0
+        for (row in 0 until steps) {
+            val y = (row * image.height / steps).coerceAtMost(image.height - 1)
+            for (column in 0 until steps) {
+                val x = (column * image.width / steps).coerceAtMost(image.width - 1)
+                val offset = y * rowStride + x * pixelStride
+                if (offset >= 0 && offset + 2 < buffer.limit()) {
+                    val red = buffer.get(offset).toInt() and 0xff
+                    val green = buffer.get(offset + 1).toInt() and 0xff
+                    val blue = buffer.get(offset + 2).toInt() and 0xff
+                    total += (0.2126 * red + 0.7152 * green + 0.0722 * blue).roundToInt()
+                    count++
+                }
+            }
+        }
+        return if (count == 0) -1 else (total / count).toInt()
+    }
+
+    private fun persistFrameDiagnostics(width: Int, height: Int) {
+        getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+            .putInt("capture_frame_width", width)
+            .putInt("capture_frame_height", height)
+            .putInt("capture_average_brightness", lastAverageBrightness)
+            .putLong("capture_frames", frameCount.toLong())
+            .apply()
+    }
 
     private fun setCaptureState(active: Boolean, status: String) {
         getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
