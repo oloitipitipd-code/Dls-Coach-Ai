@@ -161,9 +161,22 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         }
     }
 
-    val startCapture = {
+    val launchScreenCapture = {
         val manager = context.getSystemService(android.content.Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         capturePermissionLauncher.launch(manager.createScreenCaptureIntent())
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchScreenCapture()
+        else Toast.makeText(context, "Allow notifications so Android can show the active capture status and stop control.", Toast.LENGTH_LONG).show()
+    }
+    val startCapture = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            launchScreenCapture()
+        }
     }
     val stopCapture = {
         context.startService(Intent(context, LiveCaptureService::class.java).setAction(LiveCaptureService.ACTION_STOP))
