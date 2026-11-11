@@ -1052,16 +1052,37 @@ fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
     require(root.optInt("schemaVersion", -1) in 1..3) { "Unsupported backup version." }
-    require(root.optJSONArray("players") != null) { "The backup is missing its player list." }
-    require(root.optJSONArray("matches") != null) { "The backup is missing its match list." }
-    val players = loadPlayers(root.optJSONArray("players").toString())
-    val matches = loadMatches(root.optJSONArray("matches").toString())
+    val playerArray = root.optJSONArray("players")
+        ?: error("The backup is missing its player list.")
+    val matchArray = root.optJSONArray("matches")
+        ?: error("The backup is missing its match list.")
+    require(playerArray.length() <= 100) { "The backup contains too many player records." }
+    require(matchArray.length() <= 10000) { "The backup contains too many match records." }
+    require((0 until playerArray.length()).all { playerArray.optJSONObject(it) != null }) {
+        "The backup contains an invalid player record."
+    }
+    require((0 until matchArray.length()).all { matchArray.optJSONObject(it) != null }) {
+        "The backup contains an invalid match record."
+    }
+    val players = loadPlayers(playerArray.toString())
+    val matches = loadMatches(matchArray.toString())
+    require(players.size == playerArray.length()) { "One or more player records could not be read." }
+    require(matches.size == matchArray.length()) { "One or more match records could not be read." }
+    require(players.all { it.name.isNotBlank() && it.rating in 1..100 }) {
+        "The backup contains invalid player names or ratings."
+    }
+    require(matches.all { match ->
+        match.result in setOf("Win", "Draw", "Loss") && match.scored in 0..99 && match.conceded in 0..99 &&
+            match.result == when {
+                match.scored > match.conceded -> "Win"
+                match.scored == match.conceded -> "Draw"
+                else -> "Loss"
+            }
+    }) { "The backup contains a match with invalid or inconsistent result data." }
     val progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]")
     val formation = root.optString("formation", "5-3-2")
     val supportedFormations = setOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
     require(formation in supportedFormations) { "The backup contains an unsupported formation." }
-    require(players.size <= 100) { "The backup contains too many player records." }
-    require(matches.size <= 10000) { "The backup contains too many match records." }
     return CoachBackup(
         players = players,
         matches = matches,
