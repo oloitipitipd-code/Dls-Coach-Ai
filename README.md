@@ -1,6 +1,6 @@
 # DLS Coach AI
 
-**Standalone Android companion for Dream League Soccer 2026.** Version **1.6.0** (version code 7) on the `feature/real-account-integration-audit` development branch.
+**Standalone Android companion for Dream League Soccer 2026.** Version **1.7.0** (version code 8) on the `feature/real-account-integration-audit` development branch.
 
 Core squad, tactical, match, development and manager functions run locally. The app does not require ChatGPT, an OpenAI account, a cloud AI service or a paid subscription for these features.
 
@@ -51,7 +51,7 @@ The debug APK is the installable test build. A green CI run verifies those autom
 2. Extract the ZIP on Android.
 3. Open `app-debug.apk` and allow installation from Files if Android asks.
 4. If Android reports a signature conflict with an older CI build, export your app backup first. Different GitHub runners can generate different debug signing keys. Uninstall the old build only after you have secured your backup, then install and restore it.
-5. Confirm version 1.6.0 and test ordinary app functions before enabling screen capture.
+5. Confirm version 1.7.0 and test ordinary app functions before enabling screen capture.
 
 ## Project documents
 
@@ -60,4 +60,4 @@ The debug APK is the installable test build. A green CI run verifies those autom
 
 ## Development status
 
-The feature branch contains the 1.6.0 manager and live-squad prototype. It is not the same as the repository's `main` branch. Do not treat a successful CI build as a phone-tested release. Remaining real-device checks include install/upgrade, data persistence, backup restore, screenshot import, DLS launcher detection, capture permission/stop behaviour, OCR quality and resource use on the target phone.
+The feature branch contains the 1.7.0 manager and live-squad prototype. It is not the same as the repository's `main` branch. Do not treat a successful CI build as a phone-tested release. Remaining real-device checks include install/upgrade, data persistence, backup restore, screenshot import, DLS launcher detection, capture permission/stop behaviour, OCR quality and resource use on the target phone.
