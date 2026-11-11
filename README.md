@@ -34,3 +34,6 @@ The CI workflow runs JVM unit tests for the capture-frame brightness helper befo
 
 ## Player development and team trends
 The Performance Centre supports dated, manually verified player-card snapshots (overall rating plus one selected attribute), comparison of first and latest records, and inclusion of development history in backups and coaching reports. Team analysis compares the latest five logged matches with the previous five when at least ten results are available. These are descriptive trends from user-entered records, not causal proof or live game telemetry.
+
+## Tactical event pattern tracking
+When recording a match, users can optionally tag observed events such as opponent counter-attacks, high-press situations, midfield losses, missed chances, goalkeeper errors, defensive errors and set pieces. The Performance Centre counts only these explicit manual tags and highlights the most frequent categories. This is a review aid, not automatic event recognition; inspect the relevant match footage and notes before changing tactics.
