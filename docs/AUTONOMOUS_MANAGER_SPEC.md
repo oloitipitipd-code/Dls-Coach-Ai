@@ -1,7 +1,7 @@
 # DLS Coach AI — Autonomous Manager Specification
 
 ## Product goal
-DLS Coach AI is an English-only Android companion that manages the user's DLS 26 squad information and coaching workflow. It analyses evidence supplied by the user and prepares recommendations. It does not modify the game, control matches, spend coins/gems, buy players, or guarantee wins.
+DLS Coach AI is a standalone, English-only Android companion intended to operate independently on the user's phone while DLS 26 is running. ChatGPT, OpenAI accounts, external AI assistants and cloud AI services are not runtime dependencies. Its own bundled on-device processing handles authorised screen capture, OCR, squad records, match analysis, tactical coaching and player development. It connects to DLS through user-authorised passive visual capture and user-supplied screenshots/results; no official public DLS gameplay API or partner integration has been established. It does not modify the game, control matches, spend coins/gems, buy players, or guarantee wins.
 
 ## Operating principles
 - Evidence first: never invent player names, positions, ratings, attributes, match events, or results.
@@ -31,8 +31,17 @@ DLS Coach AI is an English-only Android companion that manages the user's DLS 26
 - Development: individual plans, training history, attribute changes.
 - Manager: prioritised tasks, pending confirmations, decision history, settings and data export.
 
+## Standalone DLS connection requirement
+- The app must complete its core workflows without opening ChatGPT or sending content to an external assistant. No OpenAI key, ChatGPT subscription, external AI account or cloud inference is required for core operation.
+- Current connection method: Android MediaProjection screen capture, explicitly approved by the user, with on-device ML Kit OCR. Prefer selecting the DLS app window when Android offers that option. Process frames locally and do not save or upload raw frames by default.
+- The visual connection is passive. It can read only what is actually visible in captured DLS screens. OCR text is not equivalent to understanding player movement, ball possession, player identity or tactical events.
+- Do not claim a direct internal game-data/API connection. No authorised public DLS 26 gameplay API or SDK has been verified. Any future official integration requires written permission or documented support from First Touch Games.
+- Do not use Accessibility Service to tap controls, overlays that interfere with play, input injection, bots, game-memory inspection, reverse engineering, modified APKs, traffic interception or private endpoints. The app remains a coaching companion; the player controls DLS.
+- Build local intelligence incrementally: screen OCR, conservative scoreboard/time extraction, confidence-labelled visual signals, then post-match summaries. Do not give tactical alerts until the relevant event detector has been validated against labelled DLS footage.
+- If Android or DLS policy changes make a capture method inappropriate, disable it rather than bypassing platform/game protections.
+
 ## Safety and technical boundaries
-- The app is an assistant, not a game bot. No memory editing, game-file modification, network interception, or automated gameplay.
+- The app is an independent, local-first DLS companion, not a game bot. No memory editing, game-file modification, network interception, or automated gameplay. Core features must not depend on ChatGPT or another external assistant.
 - OCR is fallible. Extracted values must be visibly marked as unconfirmed until the user reviews them.
 - Match-video analysis requires a genuine supported vision pipeline; do not label a share-to-ChatGPT action as in-app analysis.
 - If a feature requires internet, an external model, or paid service, disclose this and obtain consent before enabling it.
