@@ -10,6 +10,8 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -94,7 +96,22 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
-    var captureRequested by remember { mutableStateOf(false) }
+    var captureRequested by remember { mutableStateOf(prefs.getBoolean("capture_active", false)) }
+    var captureStatus by remember { mutableStateOf(prefs.getString("capture_status", "Not started") ?: "Not started") }
+    var captureFrames by remember { mutableLongStateOf(prefs.getLong("capture_frames", 0L)) }
+
+    DisposableEffect(context) {
+        val activity = context as? ComponentActivity
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                captureRequested = prefs.getBoolean("capture_active", false)
+                captureStatus = prefs.getString("capture_status", "Not started") ?: "Not started"
+                captureFrames = prefs.getLong("capture_frames", 0L)
+            }
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose { activity?.lifecycle?.removeObserver(observer) }
+    }
 
     val capturePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data
@@ -107,6 +124,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
                 else context.startService(serviceIntent)
                 captureRequested = true
+                captureStatus = "Starting capture…"
             } catch (error: Exception) {
                 captureRequested = false
                 Toast.makeText(context, "Could not start capture: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -124,6 +142,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val stopCapture = {
         context.startService(Intent(context, LiveCaptureService::class.java).setAction(LiveCaptureService.ACTION_STOP))
         captureRequested = false
+        captureStatus = "Stopping capture…"
     }
     var players by remember {
         mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
@@ -281,6 +300,8 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     onExport = { exportBackupPicker.launch("DLS-Coach-AI-backup.json") },
                     onImport = { importBackupPicker.launch(arrayOf("application/json", "text/*")) },
                     captureRequested = captureRequested,
+                    captureStatus = captureStatus,
+                    captureFrames = captureFrames,
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
@@ -383,7 +404,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -408,8 +429,10 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("LIVE MATCH CO-PILOT", fontWeight = FontWeight.Bold)
+                Text(captureStatus, style = MaterialTheme.typography.bodySmall)
+                Text("Frames sampled: $captureFrames", style = MaterialTheme.typography.labelSmall)
                 Text(
-                    if (captureRequested) "Capture was requested. Use the persistent Android notification to confirm the session is active or stop it."
+                    if (captureRequested) "Capture is active. Use the persistent Android notification or the button below to stop it."
                     else "Start a user-authorised screen-capture session. If Android offers app-window sharing, choose DLS 26.",
                     style = MaterialTheme.typography.bodySmall
                 )
