@@ -298,11 +298,11 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Connect").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "↔")[index]) },
                             label = { Text(label) }
                         )
                     }
@@ -334,9 +334,21 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 )
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, Modifier.padding(padding))
-                else -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
+                4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
                 }, modifier = Modifier.padding(padding))
+                5 -> IntegrationsScreen(
+                    onShareReport = {
+                        val report = buildCoachReport(players, matches, formation, style, progressEntries)
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "DLS Coach AI coaching report")
+                            putExtra(Intent.EXTRA_TEXT, report)
+                        }
+                        context.startActivity(Intent.createChooser(send, "Choose an app to share your report"))
+                    },
+                    modifier = Modifier.padding(padding)
+                )
             }
         }
 
