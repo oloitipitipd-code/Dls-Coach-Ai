@@ -44,3 +44,22 @@ class CaptureFrameMetricsTest {
         assertEquals(-1, result)
     }
 }
+
+class MatchPeriodComparisonTest {
+    @Test
+    fun requiresTenMatchesForTwoCompleteSamples() {
+        val matches = List(9) { Match("Win", 2, 0, "") }
+        assertEquals(true, compareRecentPeriods(matches).first().contains("at least ten matches"))
+    }
+
+    @Test
+    fun detectsImprovedResultsAcrossTwoFiveMatchPeriods() {
+        val latest = List(5) { Match("Win", 2, 0, "") }
+        val previous = List(5) { Match("Loss", 0, 2, "") }
+        val insights = compareRecentPeriods(latest + previous)
+        assertEquals(true, insights.first().contains("goals scored per match +2.0"))
+        assertEquals(true, insights.first().contains("goals conceded per match -2.0"))
+        assertEquals(true, insights.first().contains("win rate +100.0 percentage points"))
+        assertEquals(true, insights.any { it.contains("defensive results improved") })
+    }
+}
