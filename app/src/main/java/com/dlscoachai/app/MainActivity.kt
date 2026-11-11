@@ -933,8 +933,9 @@ fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (
 @Composable
 fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
-    var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
-    var rating by remember { mutableStateOf(initialPlayer?.rating?.toString() ?: "90") }
+    var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "UNK") }
+    var rating by remember { mutableStateOf(initialPlayer?.rating?.toString() ?: "") }
+    var showAttributes by remember(initialPlayer) { mutableStateOf(initialPlayer?.statsKnown == true) }
     val statNames = listOf("SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC", "GKR", "GKH")
     val stats = remember(initialPlayer) { mutableStateMapOf<String, String>().apply {
         statNames.forEachIndexed { index, key ->
@@ -942,44 +943,89 @@ fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd:
             put(key, if (initialPlayer?.statsKnown == true) value.toString() else "")
         }
     } }
-    val positions = listOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
+    val positions = listOf("UNK", "GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
+    val ratingValue = rating.toIntOrNull()
+    val attributeValues = statNames.map { stats[it]?.toIntOrNull() }
+    val attributesValid = attributeValues.all { it != null && it in 1..100 }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialPlayer == null) "Add player and card stats" else "Edit player profile") },
+        title = { Text(if (initialPlayer == null) "Add player" else "Edit player profile") },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 OutlinedTextField(name, { name = it }, label = { Text("Player name") }, singleLine = true)
-                OutlinedTextField(rating, { rating = it.filter(Char::isDigit).take(3) }, label = { Text("Overall rating") }, singleLine = true)
+                OutlinedTextField(
+                    rating,
+                    { rating = it.filter(Char::isDigit).take(3) },
+                    label = { Text("Overall rating (1–100)") },
+                    singleLine = true
+                )
                 Text("Natural position")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    positions.forEach { p -> FilterChip(selected = position == p, onClick = { position = p }, label = { Text(p) }) }
+                    positions.forEach { p ->
+                        FilterChip(
+                            selected = position == p,
+                            onClick = { position = p },
+                            label = { Text(if (p == "UNK") "Unknown" else p) }
+                        )
+                    }
                 }
-                Text("Enter the numbers exactly as shown on the in-game player card (1–100). For a goalkeeper, prioritise GKR and GKH. All fields must be verified before saving.", style = MaterialTheme.typography.bodySmall)
-                statNames.forEach { stat ->
-                    OutlinedTextField(
-                        value = stats[stat] ?: "70",
-                        onValueChange = { stats[stat] = it.filter(Char::isDigit).take(3) },
-                        label = { Text(stat) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                Text(
+                    "You can save the player's name, rating and position first. Card attributes are optional and can be added later.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = showAttributes, onCheckedChange = { showAttributes = it })
+                    Text("Enter all 10 card attributes now")
+                }
+                if (showAttributes) {
+                    Text(
+                        "Copy every value exactly from the in-game card. All ten values must be between 1 and 100. Do not estimate unreadable values.",
+                        style = MaterialTheme.typography.bodySmall
                     )
+                    statNames.forEach { stat ->
+                        OutlinedTextField(
+                            value = stats[stat] ?: "",
+                            onValueChange = { stats[stat] = it.filter(Char::isDigit).take(3) },
+                            label = { Text(stat) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = {
-            val value = rating.toIntOrNull()
-            val numbers = statNames.map { stats[it]?.toIntOrNull() }
-            if (name.isNotBlank() && value != null && value in 1..100 && numbers.all { it != null && it in 1..100 }) {
-                onAdd(Player(name.trim(), position, value,
-                    numbers[0]!!, numbers[1]!!, numbers[2]!!, numbers[3]!!, numbers[4]!!,
-                    numbers[5]!!, numbers[6]!!, numbers[7]!!, numbers[8]!!, numbers[9]!!,
-                    statsKnown = true
-                ))
-            }
-        }) { Text("Save player") } },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && ratingValue != null && ratingValue in 1..100 &&
+                    (!showAttributes || attributesValid),
+                onClick = {
+                    val value = ratingValue ?: return@TextButton
+                    if (showAttributes) {
+                        onAdd(Player(
+                            name = name.trim(),
+                            position = position,
+                            rating = value,
+                            spe = attributeValues[0]!!,
+                            acc = attributeValues[1]!!,
+                            sta = attributeValues[2]!!,
+                            str = attributeValues[3]!!,
+                            con = attributeValues[4]!!,
+                            pas = attributeValues[5]!!,
+                            sho = attributeValues[6]!!,
+                            tac = attributeValues[7]!!,
+                            gkr = attributeValues[8]!!,
+                            gkh = attributeValues[9]!!,
+                            statsKnown = true
+                        ))
+                    } else {
+                        onAdd(Player(name = name.trim(), position = position, rating = value, statsKnown = false))
+                    }
+                }
+            ) { Text("Save player") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
