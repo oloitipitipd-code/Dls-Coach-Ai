@@ -3,6 +3,7 @@ package com.dlscoachai.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.widget.Toast
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -27,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 data class Player(
     val name: String,
@@ -51,13 +54,41 @@ data class CoachBackup(val players: List<Player>, val matches: List<Match>, val 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { DlsCoachApp() }
+        val sharedImages = extractSharedImageUris(intent)
+        setContent { DlsCoachApp(sharedImageUris = sharedImages) }
+    }
+
+    private fun extractSharedImageUris(source: Intent?): List<Uri> {
+        if (source == null) return emptyList()
+        return when (source.action) {
+            Intent.ACTION_SEND -> {
+                if (source.type?.startsWith("image/") != true) return emptyList()
+                val uri = if (Build.VERSION.SDK_INT >= 33) {
+                    source.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    source.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+                }
+                listOfNotNull(uri)
+            }
+            Intent.ACTION_SEND_MULTIPLE -> {
+                if (source.type?.startsWith("image/") != true) return emptyList()
+                val uris = if (Build.VERSION.SDK_INT >= 33) {
+                    source.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    source.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+                }
+                uris?.take(8).orEmpty()
+            }
+            else -> emptyList()
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DlsCoachApp() {
+fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
@@ -74,6 +105,39 @@ fun DlsCoachApp() {
     var ocrBusy by remember { mutableStateOf(false) }
     var ocrText by remember { mutableStateOf(prefs.getString("last_squad_ocr", "") ?: "") }
     var ocrError by remember { mutableStateOf("") }
+
+    LaunchedEffect(sharedImageUris) {
+        if (sharedImageUris.isNotEmpty()) {
+            ocrBusy = true
+            ocrError = ""
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            val scannedTexts = mutableListOf<String>()
+            try {
+                sharedImageUris.take(8).forEachIndexed { index, uri ->
+                    val image = InputImage.fromFilePath(context, uri)
+                    val result = suspendCancellableCoroutine<com.google.mlkit.vision.text.Text> { continuation ->
+                        recognizer.process(image)
+                            .addOnSuccessListener { text ->
+                                if (continuation.isActive) continuation.resume(text)
+                            }
+                            .addOnFailureListener { error ->
+                                if (continuation.isActive) continuation.resumeWith(Result.failure(error))
+                            }
+                    }
+                    scannedTexts.add("IMAGE ${index + 1}\n${result.text}")
+                }
+                ocrText = scannedTexts.joinToString("\n\n")
+                prefs.edit().putString("last_squad_ocr", ocrText).apply()
+                showOcrDialog = true
+            } catch (error: Exception) {
+                ocrError = error.localizedMessage ?: "Could not read the shared image. Try sharing it again."
+                Toast.makeText(context, ocrError, Toast.LENGTH_LONG).show()
+            } finally {
+                recognizer.close()
+                ocrBusy = false
+            }
+        }
+    }
 
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
