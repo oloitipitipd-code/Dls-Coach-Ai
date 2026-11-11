@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -71,9 +72,10 @@ fun DlsCoachApp() {
             val share = Intent(Intent.ACTION_SEND).apply {
                 type = context.contentResolver.getType(uri) ?: "*/*"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TEXT, "Please review this DLS 26 Dream League Live match evidence. Identify goals conceded, defensive shape, tackling decisions, midfield protection, attacking patterns, chance creation and three specific changes to test. Only describe what is visible; do not invent events.")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(share, "Share match footage for analysis"))
+            context.startActivity(Intent.createChooser(share, "Share match evidence for coaching review"))
         }
     }
 
@@ -82,9 +84,10 @@ fun DlsCoachApp() {
             val share = Intent(Intent.ACTION_SEND).apply {
                 type = context.contentResolver.getType(uri) ?: "image/*"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TEXT, "Analyse this DLS 26 squad screenshot. Read only visible player names, positions, ratings and attributes. Recommend the strongest starting XI for aggressive attacking with strong defence, prioritising role fit, tackling, strength, speed, stamina, passing and finishing. Explain any uncertainty and do not guess unreadable stats.")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(share, "Send squad screenshot to ChatGPT for review"))
+            context.startActivity(Intent.createChooser(share, "Send squad screenshot for AI review"))
         }
     }
 
@@ -228,6 +231,9 @@ fun SquadScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(player.name, fontWeight = FontWeight.Bold)
                                 Text("${player.position}  •  OVR ${player.rating}", style = MaterialTheme.typography.bodySmall)
+                                Text("SPE ${player.spe} · ACC ${player.acc} · STA ${player.sta} · STR ${player.str}", style = MaterialTheme.typography.labelSmall)
+                                Text("CON ${player.con} · PAS ${player.pas} · SHO ${player.sho} · TAC ${player.tac}", style = MaterialTheme.typography.labelSmall)
+                                if (player.position == "GK") Text("GKR ${player.gkr} · GKH ${player.gkh}", style = MaterialTheme.typography.labelSmall)
                             }
                             TextButton(onClick = { onDelete(player) }) { Text("Remove") }
                         }
