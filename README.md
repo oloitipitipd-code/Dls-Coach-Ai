@@ -50,6 +50,9 @@ The `feature/real-account-integration-audit` branch adds conservative local inte
 
 This is an early text-parser prototype, not validated visual player-card recognition. It does not yet extract positions, individual attributes, resource balances, gifts or player-development changes. OCR accuracy and device impact require testing on real DLS screens on the target Infinix phone. The `main` branch remains unchanged by this prototype work.
 
+## Manager dashboard (v1.6.0 development branch)
+The Manager tab stores user-confirmed resource snapshots (coins, gems, coaches and gifts), shows a local recommendation approval queue, records decisions as approved, dismissed or marked tested, and includes these fields in schema-version 3 JSON backups. Schema-version 1 and 2 backups remain readable. Resource values are manually entered; they are not live account inventory. "Marked tested" records the user's statement that they tried a recommendation and does not itself verify the match outcome.
+
 ## Engineering checks
 The CI workflow runs JVM unit tests for the capture-frame brightness helper before assembling the debug APK. These tests validate pixel-stride handling, row padding, invalid dimensions and short buffers; they do not replace real-device capture, battery, heat or game-performance testing.
 
