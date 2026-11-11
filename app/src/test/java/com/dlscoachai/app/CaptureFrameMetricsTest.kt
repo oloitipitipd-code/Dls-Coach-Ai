@@ -101,3 +101,33 @@ class TacticalEventInsightsTest {
         assertEquals(true, insights.single().contains("No tagged tactical events in the latest five"))
     }
 }
+
+class PlayerContributionStatsTest {
+    @Test
+    fun aggregatesRepeatedGoalScorersAndAssists() {
+        val matches = listOf(
+            Match("Win", 3, 1, "", scorers = listOf("Mbappe", "Mbappe", "Salah"), assists = listOf("Salah", "Bellingham")),
+            Match("Draw", 1, 1, "", scorers = listOf("Salah"), assists = listOf("Mbappe"))
+        )
+        val stats = playerContributionStats(matches).associateBy { it.name }
+        assertEquals(2, stats["Mbappe"]?.goals)
+        assertEquals(1, stats["Mbappe"]?.assists)
+        assertEquals(2, stats["Salah"]?.goals)
+        assertEquals(1, stats["Salah"]?.assists)
+        assertEquals(1, stats["Bellingham"]?.assists)
+    }
+
+    @Test
+    fun ranksPlayersByRecordedGoalAndAssistContributions() {
+        val matches = listOf(
+            Match("Win", 2, 0, "", scorers = listOf("Player A", "Player B"), assists = listOf("Player A"))
+        )
+        val stats = playerContributionStats(matches)
+        assertEquals("Player A", stats.first().name)
+    }
+
+    @Test
+    fun returnsNoContributionRowsWhenNoPlayersWereEntered() {
+        assertEquals(emptyList<PlayerContribution>(), playerContributionStats(listOf(Match("Win", 1, 0, ""))))
+    }
+}
