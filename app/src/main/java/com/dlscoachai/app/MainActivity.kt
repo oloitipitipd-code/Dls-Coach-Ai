@@ -341,26 +341,24 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                             label = { Text(label) }
                         )
                     }
-                    Box {
-                        NavigationBarItem(
-                            selected = tab >= 4,
-                            onClick = { showMoreMenu = true },
-                            icon = { Text("⋯") },
-                            label = { Text("More") }
-                        )
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
-                        ) {
-                            listOf("Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        tab = index + 4
-                                        showMoreMenu = false
-                                    }
-                                )
-                            }
+                    NavigationBarItem(
+                        selected = tab >= 4,
+                        onClick = { showMoreMenu = true },
+                        icon = { Text("⋯") },
+                        label = { Text("More") }
+                    )
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false }
+                    ) {
+                        listOf("Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    tab = index + 4
+                                    showMoreMenu = false
+                                }
+                            )
                         }
                     }
                 }
