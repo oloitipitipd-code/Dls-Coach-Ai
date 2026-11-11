@@ -68,6 +68,7 @@ fun DlsCoachApp() {
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
+    var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var showMatchDialog by remember { mutableStateOf(false) }
     var showOcrDialog by remember { mutableStateOf(false) }
     var ocrBusy by remember { mutableStateOf(false) }
@@ -185,6 +186,7 @@ fun DlsCoachApp() {
                     players,
                     onAdd = { showPlayerDialog = true },
                     onDelete = { players = players - it },
+                    onEdit = { editingPlayer = it },
                     onUploadScreenshot = { squadImagePicker.launch(arrayOf("image/*")) },
                     modifier = Modifier.padding(padding)
                 )
@@ -204,8 +206,16 @@ fun DlsCoachApp() {
 
         if (showPlayerDialog) {
             AddPlayerDialog(
+                initialPlayer = null,
                 onDismiss = { showPlayerDialog = false },
                 onAdd = { player -> players = players + player; showPlayerDialog = false }
+            )
+        }
+        editingPlayer?.let { current ->
+            AddPlayerDialog(
+                initialPlayer = current,
+                onDismiss = { editingPlayer = null },
+                onAdd = { updated -> players = players.map { if (it == current) updated else it }; editingPlayer = null }
             )
         }
         if (showMatchDialog) {
@@ -291,6 +301,7 @@ fun SquadScreen(
     players: List<Player>,
     onAdd: () -> Unit,
     onDelete: (Player) -> Unit,
+    onEdit: (Player) -> Unit,
     onUploadScreenshot: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -325,7 +336,10 @@ fun SquadScreen(
                                     Text("Attributes not verified yet", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                                 }
                             }
-                            TextButton(onClick = { onDelete(player) }) { Text("Remove") }
+                            Column(horizontalAlignment = Alignment.End) {
+                                TextButton(onClick = { onEdit(player) }) { Text("Edit") }
+                                TextButton(onClick = { onDelete(player) }) { Text("Remove") }
+                            }
                         }
                     }
                 }
@@ -498,16 +512,21 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
 }
 
 @Composable
-fun AddPlayerDialog(onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var position by remember { mutableStateOf("CM") }
-    var rating by remember { mutableStateOf("90") }
+fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
+    var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
+    var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
+    var rating by remember { mutableStateOf(initialPlayer?.rating?.toString() ?: "90") }
     val statNames = listOf("SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC", "GKR", "GKH")
-    val stats = remember { mutableStateMapOf<String, String>().apply { statNames.forEach { put(it, "70") } } }
+    val stats = remember(initialPlayer) { mutableStateMapOf<String, String>().apply {
+        statNames.forEachIndexed { index, key ->
+            val value = initialPlayer?.let { listOf(it.spe, it.acc, it.sta, it.str, it.con, it.pas, it.sho, it.tac, it.gkr, it.gkh)[index] }
+            put(key, if (initialPlayer?.statsKnown == true) value.toString() else "")
+        }
+    } }
     val positions = listOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add player and card stats") },
+        title = { Text(if (initialPlayer == null) "Add player and card stats" else "Edit player profile") },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
@@ -519,7 +538,7 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     positions.forEach { p -> FilterChip(selected = position == p, onClick = { position = p }, label = { Text(p) }) }
                 }
-                Text("Enter the numbers exactly as shown on the in-game player card (1–100). For a goalkeeper, prioritise GKR and GKH.", style = MaterialTheme.typography.bodySmall)
+                Text("Enter the numbers exactly as shown on the in-game player card (1–100). For a goalkeeper, prioritise GKR and GKH. All fields must be verified before saving.", style = MaterialTheme.typography.bodySmall)
                 statNames.forEach { stat ->
                     OutlinedTextField(
                         value = stats[stat] ?: "70",
