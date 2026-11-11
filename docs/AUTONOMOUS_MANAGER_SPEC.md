@@ -437,3 +437,17 @@ The user's minimum recruitment threshold is **80 overall rating**.
 - For every candidate, display starting rating, estimated/verified maximum, gap to 97, confidence in the estimate, key role attributes and a clear recommendation: recruit for 97+ pathway, recruit for role value and develop to verified maximum, or do not recruit.
 - Track recruitment and development separately: date acquired, initial rating and attributes, each coach use, actual recipient, permanent rating/attribute changes, resource cost, current rating and verified stopping point.
 - Never spend coins, gems or coaches, or make a game purchase, without explicit user approval. The user performs all in-game actions manually.
+
+## Squad-benefit recruitment gate
+
+An 80+ rating is a minimum eligibility filter, **not** a reason by itself to recruit. Recommend a player only when evidence indicates that the player would materially benefit this specific squad and the user's aggressive-attacking / strong-defence style.
+
+Before recommending recruitment, compare the candidate with current squad players in the same role and assess:
+- Whether the position or role is an actual squad weakness or depth gap.
+- Whether the candidate improves role-relevant visible attributes (for example pace, stamina, strength, tackling, positioning, passing, crossing, dribbling or finishing as appropriate to the role).
+- Whether the candidate improves the starting XI, rotation options, tactical flexibility or reliable cover.
+- Whether the candidate duplicates an already strong role while leaving a more important weakness unresolved.
+- Recruitment cost and opportunity cost, using only values visible in-game or supplied by the user.
+- Whether the candidate has a credible development pathway toward 97+ or, if not, still provides enough immediate role value to justify recruitment.
+
+Classify each candidate as **strong squad upgrade**, **useful depth**, **situational option**, or **do not recruit**. Explain the specific squad benefit and the evidence. Do not recommend a signing solely because of overall rating, popularity, name or speculative potential. If the candidate does not improve the squad enough to justify the cost, recommend saving resources.
