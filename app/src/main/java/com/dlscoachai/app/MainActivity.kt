@@ -528,7 +528,7 @@ fun initialSquad(): List<Player> = listOf(
     Player("Lothar Matthäus", "UNK", 91), Player("Virgil van Dijk", "UNK", 95),
     Player("William Saliba", "UNK", 94), Player("Marcel Desailly", "UNK", 93),
     Player("Achraf Hakimi", "UNK", 95), Player("Gabriel", "UNK", 90),
-    Player("Matthijs de Ligt", "UNK", 90), Player("Andrew Robertson", "UNK", 90),
+    Player("Stefan de Vrij", "UNK", 90), Player("Andrew Robertson", "UNK", 90),
     Player("Reece James", "UNK", 86)
 )
 
