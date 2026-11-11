@@ -26,6 +26,8 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * User-authorised, local-only screen capture foundation.
@@ -128,9 +130,22 @@ class LiveCaptureService : Service() {
                                         textRecognizer?.process(InputImage.fromBitmap(bitmap, 0))
                                             ?.addOnSuccessListener { result ->
                                                 val recognised = result.text.take(1_200)
+                                                val analysis = LiveSquadIntelligence.analyse(recognised)
+                                                val candidatesJson = JSONArray().apply {
+                                                    analysis.candidates.forEach { candidate ->
+                                                        put(JSONObject()
+                                                            .put("name", candidate.name)
+                                                            .put("rating", candidate.rating)
+                                                            .put("sourceLine", candidate.sourceLine))
+                                                    }
+                                                }
                                                 getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
                                                     .putString("capture_ocr_text", recognised)
                                                     .putLong("capture_ocr_time", System.currentTimeMillis())
+                                                    .putString("live_screen_type", analysis.screenType)
+                                                    .putString("live_screen_confidence", analysis.confidence)
+                                                    .putString("live_squad_candidates", candidatesJson.toString())
+                                                    .putLong("live_squad_candidates_time", System.currentTimeMillis())
                                                     .apply()
                                             }
                                             ?.addOnFailureListener {
