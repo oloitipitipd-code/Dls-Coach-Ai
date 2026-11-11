@@ -63,3 +63,24 @@ class MatchPeriodComparisonTest {
         assertEquals(true, insights.any { it.contains("defensive results improved") })
     }
 }
+
+class TacticalEventInsightsTest {
+    @Test
+    fun countsOnlyExplicitlyTaggedEvents() {
+        val matches = listOf(
+            Match("Loss", 1, 3, "Lost shape [COUNTER] then another [COUNTER]"),
+            Match("Win", 2, 0, "Poor pass [MIDFIELD LOST]"),
+            Match("Loss", 0, 1, "Keeper mistake [GK ERROR]")
+        )
+        val insights = tacticalEventInsights(matches)
+        assertEquals(true, insights.any { it.contains("Opponent counter-attacks: 2") })
+        assertEquals(true, insights.any { it.contains("Midfield possession losses: 1") })
+        assertEquals(true, insights.any { it.contains("Goalkeeper errors: 1") })
+    }
+
+    @Test
+    fun explainsWhenNoTacticalEventsHaveBeenTagged() {
+        val insights = tacticalEventInsights(listOf(Match("Win", 2, 1, "Good game")))
+        assertEquals(true, insights.single().contains("No tagged tactical events yet"))
+    }
+}
