@@ -419,7 +419,17 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                     }
                 }
             }
+            if (players.any { it.position == "UNK" }) {
+                Text("Some player positions are still unknown. Assign the positions shown on their DLS cards before relying on this XI.", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall)
+            }
             if (players.size < 11) Text("You have entered ${players.size} players. Add at least 11 for a complete XI.")
+            val bench = benchRecommendations(players, formation)
+            if (bench.isNotEmpty()) {
+                Text("SUGGESTED BENCH", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                bench.forEachIndexed { index, player ->
+                    Text("${index + 1}. ${player.name} · ${player.position} · OVR ${player.rating}")
+                }
+            }
         }
         Text("TACTICAL GAME PLAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         tips.forEach { tip -> Text("• $tip") }
@@ -670,12 +680,21 @@ fun roleScore(p: Player, role: String): Int {
 }
 
 fun optimiseLineup(players: List<Player>, formation: String): List<LineupSlot> {
-    val available = players.toMutableList()
+    val available = players.filter { it.position != "UNK" }.toMutableList()
     return formationSlots(formation).map { role ->
-        val chosen = available.maxByOrNull { roleScore(it, role) }
+        val candidates = available.filter { role != "GK" || it.position == "GK" }
+        val chosen = candidates.maxByOrNull { roleScore(it, role) }
+            ?.takeIf { roleScore(it, role) >= 0 }
         if (chosen != null) available.remove(chosen)
         LineupSlot(role, chosen, chosen?.let { roleScore(it, role) } ?: 0)
     }
+}
+
+fun benchRecommendations(players: List<Player>, formation: String): List<Player> {
+    val starters = optimiseLineup(players, formation).mapNotNull { it.player }.toSet()
+    return players.filter { it !in starters && it.position != "UNK" && it.position != "GK" }
+        .sortedWith(compareByDescending<Player> { it.rating }.thenBy { it.name })
+        .take(7)
 }
 
 fun tacticalAdvice(formation: String, style: String): List<String> {
