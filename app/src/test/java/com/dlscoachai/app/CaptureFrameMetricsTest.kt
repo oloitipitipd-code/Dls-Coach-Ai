@@ -131,3 +131,22 @@ class PlayerContributionStatsTest {
         assertEquals(emptyList<PlayerContribution>(), playerContributionStats(listOf(Match("Win", 1, 0, ""))))
     }
 }
+
+class PlayerContributionTrendTest {
+    @Test
+    fun comparesPlayerContributionsAcrossTwoCompleteFiveMatchPeriods() {
+        val recent = List(5) { Match("Win", 2, 0, "", scorers = listOf("Mbappe"), assists = listOf("Salah")) }
+        val previous = List(5) { Match("Win", 1, 0, "", scorers = listOf("Salah")) }
+        val trends = playerContributionTrends(recent + previous).associateBy { it.name }
+        assertEquals(5, trends["Mbappe"]?.recentGoals)
+        assertEquals(0, trends["Mbappe"]?.previousGoals)
+        assertEquals(5, trends["Salah"]?.recentAssists)
+        assertEquals(5, trends["Salah"]?.previousGoals)
+    }
+
+    @Test
+    fun doesNotComparePlayerFormBeforeTenMatches() {
+        val matches = List(9) { Match("Win", 1, 0, "", scorers = listOf("Player A")) }
+        assertEquals(emptyList<PlayerContributionTrend>(), playerContributionTrends(matches))
+    }
+}
