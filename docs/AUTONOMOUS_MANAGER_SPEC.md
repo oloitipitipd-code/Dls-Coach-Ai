@@ -78,3 +78,51 @@ For each observation, distinguish **observed**, **suspected**, and **not enough 
 - Real-time computer vision may be uncertain and resource-intensive on entry-level phones. Validate latency, heat, battery use, frame drops and false detections on the target device before enabling live advice by default.
 - If reliable on-device analysis is not feasible, offer a lower-frequency live mode or post-match analysis rather than claiming real-time accuracy.
 
+## Defensive emergency response — user-selected requirement
+**Priority scenario:** opponents get behind the user's defensive line; defenders do not switch quickly enough and the goalkeeper reacts late. The preferred alert is a warning paired with one recommended action. This is coaching assistance only: the user remains in control of all game inputs.
+
+### User experience
+- Show a high-priority, compact on-screen alert and speak the same short instruction through text-to-speech when voice coaching is enabled.
+- Example alert: **DANGER — RUN BEHIND THE LINE. Switch to the nearest covering defender and track the runner.**
+- Example goalkeeper alert, only when the visual evidence supports it: **KEEPER DECISION — Through-ball entering space behind defence. Consider bringing the goalkeeper out if you can reach the ball first; otherwise stay goal-side and cover the passing lane.**
+- If the ball is loose and the opponent is closest, say **PRESS / INTERCEPT** only when the likely interception path is visibly safe; otherwise recommend recovering goal-side.
+- Alerts must never say that the app has switched a player, moved the goalkeeper, tackled, collected or kicked the ball. Those actions are not performed by the app.
+- Provide a quiet mode, voice mute, alert cooldown and a user-adjustable sensitivity setting. Never cover critical game controls with the coaching panel.
+
+### Detection pipeline design
+1. **Frame sampling:** obtain user-authorised MediaProjection frames at a conservative, adaptive rate. Begin with low-rate sampling; increase only if device performance and detection latency remain acceptable. Do not promise frame-perfect reaction.
+2. **Scene qualification:** detect whether the match is active and whether the view is sufficiently clear. Ignore menus, replays, pauses, loading screens and low-confidence frames.
+3. **Visual tracking:** estimate ball location, direction of travel, visible player locations, team colours where distinguishable, goal area and defensive line. Track objects across consecutive frames; attach timestamps and confidence to every estimate. Do not infer player identity or hidden attributes unless explicitly readable and confirmed.
+4. **Danger assessment:** calculate evidence-based indicators such as ball moving into space behind the defensive line, an attacker advancing goal-side of the last covering defenders, a defender trailing the runner, and distance/time-to-goal increasing in danger. Use temporal evidence across multiple frames rather than a single image.
+5. **Defender-switch recommendation:** identify the most plausible covering defender from visible position, proximity to the runner/ball, goal-side position and ability to intercept the route. If candidates are ambiguous, issue a generic instruction to select the nearest goal-side defender rather than naming a player.
+6. **Goalkeeper decision support:** estimate whether the ball is moving into the space behind the defensive line and whether the goalkeeper appears positioned to reach it before the attacker. Because perspective and game mechanics can make this uncertain, use conditional language and never issue a goalkeeper-rush instruction from weak evidence. Distinguish a collectable through-ball from a situation where staying goal-side is safer.
+7. **Alert arbitration:** prioritise imminent one-on-one/clear run-in danger, then immediate through-ball/keeper decision, then recover-and-cover situations. Deliver only the highest-priority actionable instruction; suppress duplicates with a cooldown and update the alert if the situation changes materially.
+8. **Feedback and learning:** after the match, let the user mark an alert as helpful, late, incorrect or distracting. Store these labels locally and use them to tune thresholds; do not claim model learning from outcomes that were not recorded.
+
+### Initial event rules (heuristics to validate, not assumed game facts)
+- **BREAKAWAY_DANGER:** attacker appears beyond the defensive line with possession or a reachable pass, advancing toward goal, while no clear covering defender is goal-side.
+- **THROUGH_BALL_BEHIND_LINE:** ball travels into open space behind defenders and an attacker is positioned to chase it.
+- **KEEPER_MAY_SWEEP:** through-ball enters keeper-accessible space and visual tracking suggests the keeper could arrive before the attacker. This event has a higher confidence threshold than a general danger alert.
+- **RECOVER_GOAL_SIDE:** possession is lost and the opponent has a forward route; advise recovery and protection of the central lane rather than an unsupported tackle instruction.
+- **INTERCEPTION_WINDOW:** a visible pass trajectory crosses near a defender who appears able to reach it first; advise an interception attempt only when confidence is adequate.
+
+### Confidence, latency and safety rules
+- Use three confidence bands: high (specific instruction permitted), medium (cautious general warning), low (no alert; continue observing). Thresholds must be calibrated against labelled DLS 26 recordings, not invented in advance.
+- A candidate starting target is to keep the live warning useful and timely, but actual end-to-end latency must be measured on the user's phone. Report measured latency and false-alert rate during testing; do not advertise a guaranteed response time.
+- If ball/player tracking is lost, the camera changes, visual clutter is high, or team colours cannot be distinguished, show **Tracking uncertain — no reliable defensive alert** rather than guessing.
+- Limit repeated voice alerts; do not speak over every frame. Use short phrases and a cooldown, with immediate re-alert only for a materially new danger.
+- Automatically reduce sampling or pause analysis if the phone heats, battery drain is excessive, or DLS frame rate is affected.
+
+### Build and validation sequence
+**Stage A — capture foundation:** explicit start/stop, Android capture permission, visible capture indicator, frame sampling, lifecycle cleanup and performance telemetry. No tactical claims yet.
+
+**Stage B — offline labelled replay tests:** collect user-provided DLS 26 clips with permission; manually label through-balls, breakaways, defender recovery, goalkeeper sweeps and ambiguous scenes. Split clips into development and held-out test sets. Measure event precision/recall, false alerts per match, missed danger events and alert delay.
+
+**Stage C — live defensive alerts:** implement conservative multi-frame heuristics and show on-screen alerts first. Require the user to confirm whether alerts were correct. Do not enable keeper-sweep recommendations until held-out testing demonstrates acceptable reliability.
+
+**Stage D — synchronised voice:** add Android text-to-speech for the exact displayed alert, with mute, audio focus handling and a short cooldown. Verify that speech does not obscure game audio or become distracting.
+
+**Stage E — personal calibration:** use user feedback and recorded match outcomes to adjust sensitivity. Keep a visible reset option and explain why each alert was generated.
+
+**Release gate:** do not call this feature real-time-ready until it has been tested on the target Infinix Smart 9 during actual DLS 26 matches, with documented latency, false-alert rate, missed-event rate, thermal behaviour, battery impact and game responsiveness. If results are poor, ship it as experimental or offer post-match analysis instead.
+
