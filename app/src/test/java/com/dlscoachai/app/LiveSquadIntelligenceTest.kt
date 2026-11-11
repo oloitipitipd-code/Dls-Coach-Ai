@@ -53,6 +53,31 @@ class LiveSquadIntelligenceTest {
     }
 
     @Test
+    fun rejectsZeroAsAPlayerRating() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            MY SQUAD
+            Player Example 0
+            Valid Player 90
+            """.trimIndent()
+        )
+        assertEquals(1, result.candidates.size)
+        assertEquals("Valid Player", result.candidates.single().name)
+    }
+
+    @Test
+    fun recognisesPlayerProfileScreen() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            PLAYER PROFILE
+            Example Player 91
+            """.trimIndent()
+        )
+        assertEquals("PLAYER_PROFILE", result.screenType)
+        assertEquals(1, result.candidates.size)
+    }
+
+    @Test
     fun identifiesSettingsWithoutCreatingSquadCandidates() {
         val result = LiveSquadIntelligence.analyse(
             """
