@@ -56,6 +56,17 @@ data class PlayerProgress(val playerName: String, val rating: Int, val attribute
 data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
 
+fun parseLiveSquadCandidates(raw: String): List<LiveSquadCandidate> = runCatching {
+    val array = JSONArray(raw)
+    (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        val name = item.optString("name").trim()
+        val rating = item.optInt("rating", -1)
+        if (name.isBlank() || rating !in 1..100) null
+        else LiveSquadCandidate(name, rating, item.optString("sourceLine"))
+    }
+}.getOrDefault(emptyList())
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,6 +115,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
     var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
+    var liveScreenType by remember { mutableStateOf(prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN") }
+    var liveScreenConfidence by remember { mutableStateOf(prefs.getString("live_screen_confidence", "LOW") ?: "LOW") }
+    var liveCandidatesJson by remember { mutableStateOf(prefs.getString("live_squad_candidates", "[]") ?: "[]") }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -116,6 +130,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 captureFrameHeight = prefs.getInt("capture_frame_height", 0)
                 captureBrightness = prefs.getInt("capture_average_brightness", -1)
                 captureOcrText = prefs.getString("capture_ocr_text", "") ?: ""
+                liveScreenType = prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN"
+                liveScreenConfidence = prefs.getString("live_screen_confidence", "LOW") ?: "LOW"
+                liveCandidatesJson = prefs.getString("live_squad_candidates", "[]") ?: "[]"
             }
         }
         activity?.lifecycle?.addObserver(observer)
@@ -340,6 +357,20 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 5 -> DlsConnectionScreen(
                     captureRequested = captureRequested,
                     captureStatus = captureStatus,
+                    liveScreenType = liveScreenType,
+                    liveScreenConfidence = liveScreenConfidence,
+                    liveCandidates = parseLiveSquadCandidates(liveCandidatesJson),
+                    onConfirmLiveCandidates = { candidates ->
+                        val existingNames = players.map { it.name.trim().lowercase() }.toSet()
+                        val additions = candidates
+                            .filterNot { it.name.trim().lowercase() in existingNames }
+                            .distinctBy { it.name.trim().lowercase() }
+                            .map { Player(name = it.name, position = "UNK", rating = it.rating, statsKnown = false) }
+                        players = players + additions
+                        prefs.edit().putString("live_squad_candidates", "[]").apply()
+                        liveCandidatesJson = "[]"
+                        Toast.makeText(context, "Added ${additions.size} confirmed player record(s). Positions and attributes remain unverified.", Toast.LENGTH_LONG).show()
+                    },
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
