@@ -315,11 +315,11 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "✓", "▶", "↔")[index]) },
                             label = { Text(label) }
                         )
                     }
@@ -354,7 +354,8 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
                 }, modifier = Modifier.padding(padding))
-                5 -> DlsConnectionScreen(
+                5 -> ManagerDashboardScreen(players, matches, formation, style, prefs, Modifier.padding(padding))
+                6 -> DlsConnectionScreen(
                     captureRequested = captureRequested,
                     captureStatus = captureStatus,
                     liveScreenType = liveScreenType,
@@ -375,7 +376,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
                 )
-                6 -> IntegrationsScreen(
+                7 -> IntegrationsScreen(
                     onShareReport = {
                         val report = buildCoachReport(players, matches, formation, style, progressEntries)
                         val send = Intent(Intent.ACTION_SEND).apply {
