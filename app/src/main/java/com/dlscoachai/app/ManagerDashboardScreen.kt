@@ -70,7 +70,7 @@ fun ManagerDashboardScreen(
                     Text("No recommendations are available yet.")
                 } else recommendations.forEach { recommendation ->
                     val latestDecision = decisions.firstOrNull { it.text == recommendation }
-                    val alreadyRecorded = latestDecision?.status in setOf("APPROVED", "TESTED")
+                    val alreadyRecorded = latestDecision?.status == "APPROVED" || latestDecision?.status == "TESTED"
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(recommendation)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
