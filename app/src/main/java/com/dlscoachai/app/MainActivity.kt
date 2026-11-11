@@ -57,7 +57,7 @@ fun DlsCoachApp() {
     var tab by remember { mutableIntStateOf(0) }
     var players by remember { mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]")) }
     var matches by remember { mutableStateOf(loadMatches(prefs.getString("matches", "[]") ?: "[]")) }
-    var formation by remember { mutableStateOf(prefs.getString("formation", "4-2-3-1") ?: "4-2-3-1") }
+    var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
     var showMatchDialog by remember { mutableStateOf(false) }
@@ -314,6 +314,7 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
             }
         }
         Text("RECOMMENDED STARTING XI", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Role-fit scores are coaching estimates based on the entered attributes and position, not official DLS formulas.", style = MaterialTheme.typography.bodySmall)
         if (players.isEmpty()) {
             Text("Add your players and their actual card attributes in Squad to generate a role-based XI.")
         } else {
@@ -332,6 +333,13 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
         }
         Text("TACTICAL GAME PLAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         tips.forEach { tip -> Text("• $tip") }
+        Text("PLAYER DEVELOPMENT PRIORITIES", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Defenders: build Tackling (TAC), Strength (STR), Speed (SPE) and Stamina (STA).")
+        Text("Defensive midfielders: prioritise TAC, PAS, STA and STR to win the ball and protect the back line.")
+        Text("Attacking midfielders and wingers: develop Control (CON), Passing (PAS), Acceleration (ACC) and Shooting (SHO).")
+        Text("Strikers: prioritise SHO, CON, SPE and ACC for finishing and movement.")
+        Text("Goalkeepers: compare Reactions (GKR) for shot-stopping and Handling (GKH) for catching and claiming.")
+        Text("In DLS, use the appropriate in-game coaches to develop attributes. This app cannot directly upgrade a player's card.")
         Card {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Your current setup", fontWeight = FontWeight.Bold)
