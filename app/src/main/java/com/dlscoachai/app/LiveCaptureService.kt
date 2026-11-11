@@ -150,9 +150,9 @@ class LiveCaptureService : Service() {
                             }
                             if (now - lastNotificationUpdateMs >= 10_000L) {
                                 lastNotificationUpdateMs = now
-                                setCaptureState(true, "Capture active · local diagnostics only")
+                                setCaptureState(true, "Capture active · on-device OCR")
                                 (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                                    .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount diagnostic samples"))
+                                    .notify(NOTIFICATION_ID, buildNotification("Active · local OCR · $frameCount samples"))
                             }
                         } finally {
                             image.close()
@@ -172,7 +172,7 @@ class LiveCaptureService : Service() {
                 handler
             )
             if (virtualDisplay == null) error("Android did not create the capture display.")
-            setCaptureState(true, "Capture active · local frame sampling")
+            setCaptureState(true, "Capture active · local screen OCR")
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(NOTIFICATION_ID, buildNotification("Capture active · frames are processed locally only"))
         } catch (error: Exception) {
