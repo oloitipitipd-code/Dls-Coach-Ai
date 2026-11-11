@@ -156,3 +156,12 @@ The user wants visual directional guidance to reduce misplaced passes and improv
 - Test passes, through-balls and shots separately across different camera views and match situations. Do not enable a feature as reliable until held-out testing demonstrates acceptable performance.
 - Maintain defensive awareness: do not recommend an aggressive forward pass if the visible risk of immediate counterattack is high and a safer option exists.
 
+## Private, local-only coaching overlay — explicit user requirement
+All companion coaching visuals and alerts (pass arrows, through-ball routes, shooting guides, interception warnings, defensive alerts and opponent-analysis labels) are intended to be visible only on the user's own Android device. They must not be sent to, rendered on, or modify the opponent's device or DLS match state.
+
+- Draw guidance only in a separate Android companion overlay/window owned by DLS Coach AI, subject to Android overlay permission and platform rules. Never inject graphics into the DLS app, modify game files, intercept traffic, or alter transmitted match data.
+- The overlay is a private display aid, not a shared in-game feature. The opponent receives only the normal DLS gameplay that the user legitimately controls.
+- Keep screen analysis local on the device by default. If a future optional remote AI service is introduced, disclose exactly what data leaves the device, request explicit opt-in, and do not send opponent-visible or game-control data.
+- If Android cannot safely display the overlay over DLS on the target device, provide an accessible companion notification/audio mode rather than bypassing platform protections.
+- Clearly indicate capture/overlay state and provide immediate stop/hide controls. Do not claim absolute privacy against device-level screen recording, malware, or anyone physically viewing the user's screen.
+
