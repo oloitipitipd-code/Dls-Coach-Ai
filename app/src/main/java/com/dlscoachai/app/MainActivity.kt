@@ -210,18 +210,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
-    val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) {
-            val share = Intent(Intent.ACTION_SEND).apply {
-                type = context.contentResolver.getType(uri) ?: "*/*"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "Please review this DLS 26 Dream League Live match evidence. Identify goals conceded, defensive shape, tackling decisions, midfield protection, attacking patterns, chance creation and three specific changes to test. Only describe what is visible; do not invent events.")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(share, "Share match evidence for coaching review"))
-        }
-    }
-
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
@@ -332,7 +320,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     modifier = Modifier.padding(padding)
                 )
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
-                3 -> MatchesScreen(matches, { showMatchDialog = true }, {}, Modifier.padding(padding))
+                3 -> MatchesScreen(matches, { showMatchDialog = true }, Modifier.padding(padding))
                 else -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     val report = buildCoachReport(players, matches, formation, style, progressEntries)
                     val send = Intent(Intent.ACTION_SEND).apply {
@@ -588,13 +576,10 @@ fun TacticsScreen(formation: String, style: String, onFormation: (String) -> Uni
 }
 
 @Composable
-fun MatchesScreen(matches: List<Match>, onAdd: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
+fun MatchesScreen(matches: List<Match>, onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Match Analyst", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onAdd, modifier = Modifier.weight(1f)) { Text("Log result") }
-            OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) { Text("Import footage") }
-        }
+        Button(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("Log result") }
         Text("Recent results", fontWeight = FontWeight.Bold)
         if (matches.isEmpty()) Text("No matches logged yet.")
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
