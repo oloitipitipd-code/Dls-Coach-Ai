@@ -1072,13 +1072,8 @@ fun decodeBackup(raw: String): CoachBackup {
         "The backup contains invalid player names or ratings."
     }
     require(matches.all { match ->
-        match.result in setOf("Win", "Draw", "Loss") && match.scored in 0..99 && match.conceded in 0..99 &&
-            match.result == when {
-                match.scored > match.conceded -> "Win"
-                match.scored == match.conceded -> "Draw"
-                else -> "Loss"
-            }
-    }) { "The backup contains a match with invalid or inconsistent result data." }
+        match.result in setOf("Win", "Draw", "Loss") && match.scored in 0..99 && match.conceded in 0..99
+    }) { "The backup contains invalid match result or score data." }
     val progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]")
     val formation = root.optString("formation", "5-3-2")
     val supportedFormations = setOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
