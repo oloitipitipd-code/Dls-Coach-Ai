@@ -13,6 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,6 +62,8 @@ fun DlsConnectionScreen(
     var controlsSetting by remember { mutableStateOf(prefs.getString("game_controls_setting", "") ?: "") }
     var soundSetting by remember { mutableStateOf(prefs.getString("game_sound_setting", "") ?: "") }
     var otherSetting by remember { mutableStateOf(prefs.getString("game_other_setting", "") ?: "") }
+    var detectionRefresh by remember { mutableStateOf(0) }
+    var accountConfirmed by remember { mutableStateOf(prefs.getBoolean("dls_account_confirmed", false)) }
 
     fun saveSetting(key: String, value: String) {
         prefs.edit().putString(key, value).apply()
@@ -74,7 +79,7 @@ fun DlsConnectionScreen(
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("GAME CONNECTION", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                val installedGame = remember { findInstalledDlsApp(context.packageManager) }
+                val installedGame = remember(detectionRefresh) { findInstalledDlsApp(context.packageManager) }
                 if (installedGame != null) {
                     Text("Detected: ${installedGame.label}")
                     Text("Package: ${installedGame.packageName}", style = MaterialTheme.typography.bodySmall)
@@ -94,9 +99,30 @@ fun DlsConnectionScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Open Dream League Soccer") }
                 } else {
-                    Text("Dream League Soccer was not detected among launchable apps. Install or update DLS, then reopen this screen.")
+                    Text("Dream League Soccer was not detected among launchable apps. Confirm DLS is installed, then tap Retry detection.")
                 }
+                OutlinedButton(onClick = { detectionRefresh++ }, modifier = Modifier.fillMaxWidth()) { Text("Retry game detection") }
                 Text("This connection opens the game through Android's normal app launcher. It does not inspect private game files or change game data.")
+            }
+        }
+
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("MY DLS ACCOUNT", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = accountConfirmed,
+                        onCheckedChange = {
+                            accountConfirmed = it
+                            prefs.edit().putBoolean("dls_account_confirmed", it).apply()
+                        }
+                    )
+                    Text("I confirm that I have a DLS account on this device")
+                }
+                Text(if (accountConfirmed) "Account status: confirmed by you on this phone; not directly authenticated by DLS Coach AI." else "Account status: not yet confirmed in this app.")
+                Text("First Touch Games currently documents profile linking inside DLS through Sign in with Google on Android (or Sign in with Apple on iOS). This protects/transfers your game profile; it does not grant DLS Coach AI access to your account data.")
+                Text("Keep signing in inside DLS itself. Never enter your Google password, DLS password, profile-transfer code or verification code into DLS Coach AI.")
+                Text("For squad analysis, we will read information you deliberately share through screenshots or authorised screen capture. No private account data is requested.")
             }
         }
 
