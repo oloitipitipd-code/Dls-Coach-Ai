@@ -40,6 +40,7 @@ class LiveCaptureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopCapture()
+            setCaptureState(false, "Capture stopped")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -53,6 +54,7 @@ class LiveCaptureService : Service() {
             intent?.getParcelableExtra(EXTRA_RESULT_DATA) as? Intent
         }
         if (resultData == null) {
+            setCaptureState(false, "Capture permission data was unavailable")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -97,6 +99,7 @@ class LiveCaptureService : Service() {
                         val now = SystemClock.elapsedRealtime()
                         if (now - lastNotificationUpdateMs >= 10_000L) {
                             lastNotificationUpdateMs = now
+                            setCaptureState(true, "Capture active · local frame sampling")
                             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                                 .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount low-resolution frames sampled"))
                         }
@@ -115,9 +118,11 @@ class LiveCaptureService : Service() {
                 handler
             )
             if (virtualDisplay == null) error("Android did not create the capture display.")
+            setCaptureState(true, "Capture active · local frame sampling")
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(NOTIFICATION_ID, buildNotification("Capture active · frames are processed locally only"))
         } catch (error: Exception) {
+            setCaptureState(false, "Capture failed: ${error.localizedMessage ?: "unknown error"}")
             stopCapture()
             stopSelf()
         }
@@ -159,7 +164,17 @@ class LiveCaptureService : Service() {
             .build()
     }
 
+
+    private fun setCaptureState(active: Boolean, status: String) {
+        getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+            .putBoolean("capture_active", active)
+            .putString("capture_status", status)
+            .putLong("capture_frames", frameCount.toLong())
+            .apply()
+    }
+
     private fun stopCapture() {
+        setCaptureState(false, "Capture stopped")
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.setOnImageAvailableListener(null, null)
