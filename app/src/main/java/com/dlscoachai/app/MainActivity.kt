@@ -3,6 +3,7 @@ package com.dlscoachai.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.widget.Toast
 import com.google.mlkit.vision.common.InputImage
@@ -93,6 +94,37 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
+    var captureRequested by remember { mutableStateOf(false) }
+
+    val capturePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (result.resultCode == android.app.Activity.RESULT_OK && data != null) {
+            val serviceIntent = Intent(context, LiveCaptureService::class.java).apply {
+                putExtra(LiveCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                putExtra(LiveCaptureService.EXTRA_RESULT_DATA, data)
+            }
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
+                else context.startService(serviceIntent)
+                captureRequested = true
+            } catch (error: Exception) {
+                captureRequested = false
+                Toast.makeText(context, "Could not start capture: \${error.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            captureRequested = false
+            Toast.makeText(context, "Screen capture was not started.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val startCapture = {
+        val manager = context.getSystemService(android.content.Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        capturePermissionLauncher.launch(manager.createScreenCaptureIntent())
+    }
+    val stopCapture = {
+        context.startService(Intent(context, LiveCaptureService::class.java).setAction(LiveCaptureService.ACTION_STOP))
+        captureRequested = false
+    }
     var players by remember {
         mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
     }
@@ -248,6 +280,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 0 -> HomeScreen(players, matches, formation, style,
                     onExport = { exportBackupPicker.launch("DLS-Coach-AI-backup.json") },
                     onImport = { importBackupPicker.launch(arrayOf("application/json", "text/*")) },
+                    captureRequested = captureRequested,
+                    onStartCapture = startCapture,
+                    onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
                 )
                 1 -> SquadScreen(
@@ -348,7 +383,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -368,6 +403,22 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
             Column(Modifier.padding(16.dp)) {
                 Text("First coaching principle", fontWeight = FontWeight.Bold)
                 Text("Attack aggressively with structure: keep midfield cover behind the ball and avoid pulling centre-backs out of position.")
+            }
+        }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("LIVE MATCH CO-PILOT", fontWeight = FontWeight.Bold)
+                Text(
+                    if (captureRequested) "Capture was requested. Use the persistent Android notification to confirm the session is active or stop it."
+                    else "Start a user-authorised screen-capture session. If Android offers app-window sharing, choose DLS 26.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text("This foundation samples frames locally and closes them immediately. It does not yet recognise match events, give live tactical advice, record video, capture audio or control the game.", style = MaterialTheme.typography.bodySmall)
+                if (captureRequested) {
+                    OutlinedButton(onClick = onStopCapture, modifier = Modifier.fillMaxWidth()) { Text("Stop capture session") }
+                } else {
+                    Button(onClick = onStartCapture, modifier = Modifier.fillMaxWidth()) { Text("Start screen capture") }
+                }
             }
         }
         Text("DATA SAFETY", fontWeight = FontWeight.Bold)
