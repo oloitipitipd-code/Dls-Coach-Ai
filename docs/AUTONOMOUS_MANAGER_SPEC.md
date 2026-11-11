@@ -126,3 +126,33 @@ For each observation, distinguish **observed**, **suspected**, and **not enough 
 
 **Release gate:** do not call this feature real-time-ready until it has been tested on the target Infinix Smart 9 during actual DLS 26 matches, with documented latency, false-alert rate, missed-event rate, thermal behaviour, battery impact and game responsiveness. If results are poor, ship it as experimental or offer post-match analysis instead.
 
+## Attacking pass, through-ball and shooting guidance — requested capability
+The user wants visual directional guidance to reduce misplaced passes and improve shot selection. The assistant remains observational: it may draw guidance in its own companion overlay, but it must never control the game's joystick/buttons or inject input.
+
+### Pass and receiving-player guidance
+- Track the ball, visible teammates, opponents and pitch/goal orientation over consecutive captured frames.
+- Estimate likely teammate identities by team colour and trajectory only where reliably distinguishable; otherwise refer to a teammate by visible location (e.g. left-side option, central runner) and do not invent a name.
+- Rank candidate receivers using passing-lane openness, opponent interception risk, distance, receiver movement, available space after reception, forward progression and defensive balance if possession is lost.
+- Draw an overlay arrow/line from the ball carrier toward the recommended receiving option. Use a distinct dashed line for a through-ball lane into open space, and a warning marker where an opponent may intercept.
+- If no safe pass is evident, say **No clear passing lane — retain possession or recycle the ball** rather than forcing a target.
+- Recalculate when the ball carrier, teammate run, opponent position or camera view changes. Remove stale arrows immediately when the situation changes.
+
+### Shooting guidance
+- Detect whether the ball carrier appears in a plausible shooting position and estimate visible shooting lanes toward the goal.
+- Show one or two candidate shot directions only when goal orientation, ball location and goalkeeper/defender positions are sufficiently clear.
+- Prefer a lane with less visible obstruction and a plausible angle; consider whether a teammate has a better-positioned option before recommending a shot.
+- Distinguish **shoot**, **pass**, and **not enough visual evidence**. Do not claim to predict the exact outcome, power, curve, aim-stick coordinate or scoring probability without validated DLS-specific data.
+
+### Overlay design and interaction
+- The companion overlay may show a thin solid arrow for a recommended direct pass, a dashed arrow for a through-ball, and a separate shot-direction guide toward a visible goal opening. Use labels and patterns as well as colour for accessibility.
+- Keep the overlay compact, semi-transparent and positioned away from DLS controls and important play areas. The user can move, resize, hide or disable it.
+- The overlay is advisory only. It must not obscure controls, tap the screen, move the aim joystick, choose a receiver automatically, or perform a pass/shot.
+- Pair important guidance with a short optional voice prompt (e.g. **Through-ball: central runner**) and rate-limit speech to avoid distraction.
+
+### Technical constraints and validation
+- Pitch perspective, camera movement, zoom, player overlap, team-kit similarity and motion blur can make object tracking ambiguous. If confidence is insufficient, hide the arrow and display **Pass target unclear — choose manually**.
+- Use multi-frame tracking and temporal smoothing; never draw a confident route from a single uncertain frame. Mark predicted space/trajectory as an estimate, not a guaranteed ball path.
+- Measure target-selection agreement against human-labelled DLS 26 clips, false recommendations, stale-arrow duration, overlay latency and device performance on the target phone.
+- Test passes, through-balls and shots separately across different camera views and match situations. Do not enable a feature as reliable until held-out testing demonstrates acceptable performance.
+- Maintain defensive awareness: do not recommend an aggressive forward pass if the visible risk of immediate counterattack is high and a safer option exists.
+
