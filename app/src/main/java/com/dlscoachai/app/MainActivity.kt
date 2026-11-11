@@ -334,6 +334,42 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
         Text("TACTICAL GAME PLAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         tips.forEach { tip -> Text("• $tip") }
         Text("PLAYER DEVELOPMENT PRIORITIES", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("SMART PLAYER DEVELOPMENT", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("These are personalised training priorities from the attributes you entered. They are coaching estimates, not guaranteed in-game rating gains.", style = MaterialTheme.typography.bodySmall)
+        if (players.isEmpty()) {
+            Text("Add player attributes to unlock individual development plans.")
+        } else {
+            players.sortedByDescending { it.rating }.forEach { player ->
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${player.name} · ${player.position} · OVR ${player.rating}", fontWeight = FontWeight.Bold)
+                        developmentFocus(player).forEachIndexed { index, focus ->
+                            Text("${index + 1}. $focus")
+                        }
+                    }
+                }
+            }
+        }
+        Text("SQUAD DEPTH & BALANCE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        squadBalanceAdvice(players).forEach { advice -> Text("• $advice") }
+        Text("RECENT FORM", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (matches.isEmpty()) {
+            Text("Log at least one match to begin tracking form.")
+        } else {
+            val recent = matches.take(5)
+            val wins = recent.count { it.result.equals("Win", true) }
+            val draws = recent.count { it.result.equals("Draw", true) }
+            val recentConceded = recent.sumOf { it.conceded }
+            val recentScored = recent.sumOf { it.scored }
+            Text("Last ${recent.size}: $wins wins · $draws draws · ${recent.size - wins - draws} losses")
+            Text("Goals: $recentScored scored · $recentConceded conceded")
+            Text(if (recentConceded > recentScored) "Current signal: defensive stability is the first area to investigate." else "Current signal: review consistency and keep testing what works.")
+            Text("This is a simple trend from logged results, not a full match-performance measurement.", style = MaterialTheme.typography.bodySmall)
+        }
+        Text("YOUR NEXT THREE ACTIONS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        nextCoachingActions(players, matches, formation).forEachIndexed { index, action ->
+            Card { Text("${index + 1}. $action", Modifier.padding(12.dp)) }
+        }
         Text("Defenders: build Tackling (TAC), Strength (STR), Speed (SPE) and Stamina (STA).")
         Text("Defensive midfielders: prioritise TAC, PAS, STA and STR to win the ball and protect the back line.")
         Text("Attacking midfielders and wingers: develop Control (CON), Passing (PAS), Acceleration (ACC) and Shooting (SHO).")
@@ -545,6 +581,57 @@ fun tacticalAdvice(formation: String, style: String): List<String> {
         base += "Because your style is aggressive, avoid an uncontrolled all-out press: trigger pressure near the ball and keep cover behind the pressing player."
     }
     return base
+}
+
+fun developmentFocus(player: Player): List<String> {
+    val priorities = when (player.position) {
+        "GK" -> listOf("GKR" to player.gkr, "GKH" to player.gkh, "STA" to player.sta, "STR" to player.str)
+        "CB", "LB", "RB" -> listOf("TAC" to player.tac, "STR" to player.str, "SPE" to player.spe, "STA" to player.sta, "PAS" to player.pas)
+        "CDM" -> listOf("TAC" to player.tac, "PAS" to player.pas, "STA" to player.sta, "STR" to player.str, "CON" to player.con)
+        "CM", "CAM", "LM", "RM" -> listOf("PAS" to player.pas, "CON" to player.con, "STA" to player.sta, "SHO" to player.sho, "ACC" to player.acc)
+        "LW", "RW", "CF", "ST" -> listOf("SHO" to player.sho, "SPE" to player.spe, "ACC" to player.acc, "CON" to player.con, "PAS" to player.pas)
+        else -> listOf("STA" to player.sta, "PAS" to player.pas, "CON" to player.con)
+    }
+    return priorities.sortedBy { it.second }.take(3).map { (attribute, value) ->
+        "$attribute is currently $value — consider prioritising it if it matches your in-game coach options."
+    }
+}
+
+fun squadBalanceAdvice(players: List<Player>): List<String> {
+    if (players.isEmpty()) return listOf("Add your real squad to receive a squad-depth audit.")
+    val advice = mutableListOf<String>()
+    val count = players.size
+    val goalkeepers = players.count { it.position == "GK" }
+    val centreBacks = players.count { it.position == "CB" }
+    val fullBacks = players.count { it.position == "LB" || it.position == "RB" }
+    val midfielders = players.count { it.position in listOf("CDM", "CM", "CAM", "LM", "RM") }
+    val attackers = players.count { it.position in listOf("LW", "RW", "CF", "ST") }
+    advice += "Registered squad: $count players."
+    if (goalkeepers < 2) advice += "Goalkeeper cover is thin: add or register another GK if available."
+    if (centreBacks < 3) advice += "Centre-back depth is limited for a back three or five."
+    if (fullBacks < 2) advice += "Wide defensive cover is limited; check LB/RB options."
+    if (midfielders < 4) advice += "Midfield rotation is limited; prioritise reliable central cover."
+    if (attackers < 3) advice += "Forward depth is limited; check striker and wide-attacker options."
+    if (count < 16) advice += "Your entered squad is small for rotation; add more of your actual players before relying on depth recommendations."
+    if (advice.size == 1) advice += "Your entered position mix has basic coverage. Compare individual attributes and role fit before choosing the XI."
+    advice += "Depth counts use the natural positions you entered; they do not judge player quality or official DLS squad rules."
+    return advice
+}
+
+fun nextCoachingActions(players: List<Player>, matches: List<Match>, formation: String): List<String> {
+    val actions = mutableListOf<String>()
+    if (players.size < 11) actions += "Enter the rest of your squad and accurate card attributes so the starting XI and depth audit are meaningful."
+    if (players.none { it.position == "GK" }) actions += "Add your goalkeeper's real GKR and GKH values before assessing shot-stopping."
+    if (matches.isEmpty()) actions += "Record your next three Dream League Live results, including goals scored, goals conceded and a short note about each match."
+    else {
+        val recent = matches.take(5)
+        if (recent.sumOf { it.conceded } > recent.sumOf { it.scored }) actions += "Review the last match footage for the first cause of goals conceded: exposed centre, wide channel, counterattack or goalkeeper error."
+        if (recent.count { it.result.equals("Loss", true) } >= 3) actions += "Test one tactical change at a time for the next two matches; do not change formation, style and XI simultaneously."
+        if (recent.sumOf { it.scored } == 0) actions += "Prioritise chance creation and striker role fit; review whether shots are being taken from clear positions."
+    }
+    actions += "Use the recommended XI for $formation, then compare its role fit with your own match experience."
+    actions += "Train only the attributes that are both weak for the player's role and available through your in-game coaches; record changes afterwards."
+    return actions.distinct().take(3)
 }
 
 fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String): String {
