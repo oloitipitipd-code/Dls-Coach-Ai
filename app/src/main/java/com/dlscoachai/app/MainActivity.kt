@@ -210,6 +210,19 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
+    val exportReportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri: Uri? ->
+        if (uri != null) runCatching {
+            val report = buildCoachReport(players, matches, formation, style, progressEntries)
+            context.contentResolver.openOutputStream(uri)?.use { stream ->
+                stream.write(report.toByteArray(Charsets.UTF_8))
+            } ?: error("Could not open the selected destination.")
+        }.onSuccess {
+            Toast.makeText(context, "Coaching report saved on your device.", Toast.LENGTH_LONG).show()
+        }.onFailure {
+            Toast.makeText(context, "Report export failed: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
@@ -322,13 +335,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, Modifier.padding(padding))
                 else -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
-                    val report = buildCoachReport(players, matches, formation, style, progressEntries)
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, "DLS Coach AI - Match & Squad Report")
-                        putExtra(Intent.EXTRA_TEXT, report)
-                    }
-                    context.startActivity(Intent.createChooser(send, "Send coaching report"))
+                    exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
                 }, modifier = Modifier.padding(padding))
             }
         }
@@ -781,7 +788,7 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                 Text("Style: $style")
             }
         }
-        Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("Generate and share full coaching report") }
+        Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("Generate and save coaching report") }
         Text("Important: this app recommends selection and training priorities. It cannot directly change player attributes, control the game or guarantee wins.", style = MaterialTheme.typography.bodySmall)
     }
 }
