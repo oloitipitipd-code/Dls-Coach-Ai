@@ -398,8 +398,17 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
                 Text("Goals scored: $scored  |  Goals conceded: $conceded")
                 Text("Recorded losses: $losses")
                 if (matches.isNotEmpty()) {
+                    val winRate = (matches.count { it.result.equals("Win", true) } * 100.0 / matches.size)
+                    val averageScored = scored.toDouble() / matches.size
+                    val averageConceded = conceded.toDouble() / matches.size
+                    val cleanSheets = matches.count { it.conceded == 0 }
+                    Text("Win rate: ${"%.1f".format(winRate)}%")
+                    Text("Average goals per match: ${"%.1f".format(averageScored)} scored · ${"%.1f".format(averageConceded)} conceded")
+                    Text("Clean sheets: $cleanSheets / ${matches.size}")
                     Text("Goal difference: ${scored - conceded}")
-                    Text(if (conceded > scored) "Priority: improve defensive protection and chance prevention." else "Review both chance creation and defensive consistency.")
+                    performanceInsights(matches).forEach { insight ->
+                        Text("• $insight", color = MaterialTheme.colorScheme.tertiary)
+                    }
                 }
             }
         }
@@ -781,6 +790,23 @@ fun squadBalanceAdvice(players: List<Player>): List<String> {
     if (advice.size == 1) advice += "Your entered position mix has basic coverage. Compare individual attributes and role fit before choosing the XI."
     advice += "Depth counts use the natural positions you entered; they do not judge player quality or official DLS squad rules."
     return advice
+}
+
+fun performanceInsights(matches: List<Match>): List<String> {
+    if (matches.isEmpty()) return listOf("Log matches to generate evidence-based performance trends.")
+    val recent = matches.take(5)
+    val avgConceded = recent.sumOf { it.conceded }.toDouble() / recent.size
+    val avgScored = recent.sumOf { it.scored }.toDouble() / recent.size
+    val losses = recent.count { it.result.equals("Loss", true) }
+    val cleanSheets = recent.count { it.conceded == 0 }
+    val insights = mutableListOf<String>()
+    if (avgConceded >= 2.0) insights += "Defensive alert: ${"%.1f".format(avgConceded)} goals conceded per match across the last ${recent.size}; inspect the footage to identify whether the cause is central space, wide channels, counters or goalkeeping."
+    if (avgScored < 1.0) insights += "Attacking alert: fewer than one goal per match in this sample; review chance quality, shot selection and forward support."
+    if (losses >= 3) insights += "Form alert: $losses losses in the last ${recent.size}; change one tactical variable at a time and compare the next results."
+    if (recent.size >= 3 && cleanSheets == 0) insights += "No clean sheets in the last ${recent.size}; review defensive transitions and goalkeeper evidence rather than assuming the goalkeeper is the only cause."
+    if (insights.isEmpty()) insights += "No major scoring alert in this small sample. Keep logging matches and avoid changing a working system without evidence."
+    insights += "These are statistical signals from your logged results, not proof of the cause of a goal."
+    return insights
 }
 
 fun nextCoachingActions(players: List<Player>, matches: List<Match>, formation: String): List<String> {
