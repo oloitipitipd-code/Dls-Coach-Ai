@@ -78,9 +78,26 @@ class TacticalEventInsightsTest {
         assertEquals(true, insights.any { it.contains("Goalkeeper errors: 1") })
     }
 
+
+    @Test
+    fun comparesLatestAndPreviousFiveMatchEventCounts() {
+        val latest = List(5) { Match("Loss", 0, 2, "[COUNTER]") }
+        val previous = List(5) { Match("Win", 2, 0, "") }
+        val insights = tacticalEventInsights(latest + previous)
+        assertEquals(true, insights.any { it.contains("Opponent counter-attacks: 1 in the latest 5") && it.contains("up from 0 in the previous five") })
+    }
+
+    @Test
+    fun doesNotClaimACompleteComparisonWithFewerThanTenMatches() {
+        val matches = List(6) { Match("Loss", 0, 1, "[COUNTER]") }
+        val insights = tacticalEventInsights(matches)
+        assertEquals(true, insights.any { it.contains("Log at least ten matches") })
+        assertEquals(true, insights.any { it.contains("no earlier five-match comparison") })
+    }
+
     @Test
     fun explainsWhenNoTacticalEventsHaveBeenTagged() {
         val insights = tacticalEventInsights(listOf(Match("Win", 2, 1, "Good game")))
-        assertEquals(true, insights.single().contains("No tagged tactical events yet"))
+        assertEquals(true, insights.single().contains("No tagged tactical events in the latest five"))
     }
 }
