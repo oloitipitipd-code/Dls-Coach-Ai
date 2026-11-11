@@ -595,6 +595,8 @@ fun MatchesScreen(matches: List<Match>, onAdd: () -> Unit, onImport: () -> Unit,
                     Column(Modifier.padding(12.dp)) {
                         Text("${match.result}  •  ${match.scored}-${match.conceded}", fontWeight = FontWeight.Bold)
                         if (match.note.isNotBlank()) Text(match.note)
+                        if (match.scorers.isNotEmpty()) Text("Goals: ${match.scorers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+                        if (match.assists.isNotEmpty()) Text("Assists: ${match.assists.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -1329,7 +1331,14 @@ fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: Str
     val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") {
         "- ${it.name}: ${it.position}, OVR ${it.rating}; SPE ${it.spe}, ACC ${it.acc}, STA ${it.sta}, STR ${it.str}, CON ${it.con}, PAS ${it.pas}, SHO ${it.sho}, TAC ${it.tac}, GKR ${it.gkr}, GKH ${it.gkh}"
     }
-    val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { "- ${it.result} ${it.scored}-${it.conceded}: ${it.note}" }
+    val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { match ->
+        val scorers = if (match.scorers.isEmpty()) "Scorers not recorded" else "Scorers: ${match.scorers.joinToString(", ")}"
+        val assists = if (match.assists.isEmpty()) "Assists not recorded" else "Assists: ${match.assists.joinToString(", ")}"
+        "- ${match.result} ${match.scored}-${match.conceded}: ${match.note}\n  $scorers; $assists"
+    }
+    val contributions = playerContributionStats(matches).take(15).joinToString("\n") {
+        "- ${it.name}: ${it.goals} goals, ${it.assists} assists (in ${it.appearancesWithContribution} recorded contribution matches)"
+    }.ifBlank { "No player contributions recorded." }
     val development = if (progress.isEmpty()) "No player development snapshots recorded." else progress.take(30).joinToString("\n") { "- ${it.playerName}: OVR ${it.rating}, ${it.attribute} ${it.attributeValue}, ${java.text.DateFormat.getDateInstance().format(java.util.Date(it.recordedAt))} ${it.note}" }
     return """DLS COACH AI — COACHING REVIEW
 Game: Dream League Soccer 2026
@@ -1346,6 +1355,9 @@ $games
 
 PLAYER DEVELOPMENT SNAPSHOTS
 $development
+
+PLAYER MATCH CONTRIBUTIONS
+$contributions
 
 Please analyse only the evidence provided. Identify the biggest tactical and squad weaknesses, recommend a suitable formation and starting XI from the listed players, explain defensive problems and attacking movement, and give me three specific changes to test. Do not invent player attributes or claim to have watched footage that is not attached."""
 }
