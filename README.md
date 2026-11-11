@@ -2,7 +2,7 @@
 Standalone Android companion for Dream League Soccer 2026. Core features run inside this app and do not require ChatGPT, an OpenAI account, or cloud AI.
 
 ## Build
-A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`. Current app version: 1.4.0 (version code 5).
+A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`. Current app version: 1.5.0 (version code 6).
 
 ## Current capabilities
 - Local squad records and editable player profiles
@@ -15,6 +15,12 @@ A debug APK is built by the GitHub Actions workflow in `.github/workflows/androi
 
 ## Live capture status and limitations
 The live companion requests Android MediaProjection permission, creates a foreground capture service, scales frames to a maximum long edge of 960 pixels, and samples them locally. Bundled ML Kit OCR reads visible text on-device at a limited sampling rate; raw frames are not saved or uploaded and audio is not captured. OCR is not yet gameplay-event recognition and does not generate validated tactical alerts or control DLS. Capture can be stopped from the app or its persistent Android notification. Real-device behaviour, OCR accuracy, frame rate, heat, battery use and game responsiveness still require testing on the target phone.
+
+## DLS game link and settings profile (version 1.5.0)
+- The Game Link tab searches Android-visible launcher activities for an installed app labelled Dream League Soccer and opens the matching game through its normal launcher activity.
+- It provides user-authorised MediaProjection screen capture controls and a local OCR status explanation.
+- It stores the user's own camera, graphics/performance, controls, sound and other settings notes locally.
+- The settings profile is a record and guide only. It does not silently change DLS settings, control gameplay or inspect private game data. The current OCR does not yet reliably recognise gameplay events or settings.
 
 ## Optional integrations (version 1.4.0)
 - **GitHub:** the Connect screen can query the latest public GitHub Actions workflow status and open the repository/build page. This is read-only, user-triggered and does not request a GitHub login or token.
