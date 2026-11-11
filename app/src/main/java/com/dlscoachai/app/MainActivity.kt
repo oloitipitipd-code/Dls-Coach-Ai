@@ -895,7 +895,7 @@ fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
         .toList()
 }
 
-fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String): String =
+fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String =
     JSONObject()
         .put("app", "DLS Coach AI")
         .put("schemaVersion", 2)
