@@ -267,3 +267,28 @@ The user wants help winning more defensive aerial balls (especially when opponen
 - Evaluate defensive corner/cross detection and attacking cross/header guidance separately on labelled DLS 26 footage, including precision, recall, first-contact classification, target-zone agreement, false alerts and timing.
 - Validate on held-out clips and the target Infinix Smart 9. Monitor latency, battery, heat and game responsiveness; reduce sampling or pause if performance is affected.
 - Keep all aerial target markers, crossing guides and defensive alerts in the user's private companion overlay/local data by default. Never automate gameplay input, modify DLS, intercept traffic or display guidance on the opponent's device.
+
+## Goalkeeper cross-claim decision support — explicit user requirement
+
+The user wants help deciding when to bring the goalkeeper out to catch or claim opponent crosses, especially corners and balls delivered into the penalty area. The companion must not automatically activate the goalkeeper or perform any game input; it can alert the user when a manual goalkeeper action appears appropriate.
+
+### Cross-claim assessment
+- Detect an opponent cross/corner and track the ball's flight, likely landing area, goalkeeper position, nearby attackers and defending players over consecutive frames.
+- Assess whether the ball appears to enter the goalkeeper's reachable collection area, whether the keeper has a clear route, whether an opponent is likely to arrive first, and whether a defender is better placed to challenge.
+- Recommend **BRING KEEPER OUT / CLAIM** only when the visual evidence strongly supports a safe, reachable claim and the keeper appears likely to arrive before the attacker.
+- Recommend **KEEPER STAY / DEFENDER CHALLENGE** when the cross is contested, the ball is beyond the keeper's likely reach, an attacker has the better route, or leaving the goal would expose an obvious scoring opportunity.
+- For uncertain crosses, show **CROSS DANGER — PROTECT THE GOAL; CLAIM DECISION UNCLEAR** rather than encouraging a risky rush.
+- If the ball is caught/claimed, confirm this only when clearly visible. Otherwise track the second ball and alert the user to the continuing danger.
+- Distinguish a catch/claim from a punch or deflection. Do not promise the keeper can catch every cross; the appropriate action depends on ball height/flight, reach, traffic and game mechanics.
+
+### User interaction and alerting
+- Provide a short, high-priority visual warning and optional synchronised voice cue, for example **CROSS IN — KEEPER CAN CLAIM: BRING HIM OUT NOW** or **CROSS IN — STAY GOAL-SIDE: DEFENDER IS BETTER PLACED**.
+- The user must manually activate any goalkeeper movement/rush control available in DLS 26. The app must not tap, hold, swipe, move the keeper, catch, punch or otherwise automate gameplay.
+- Do not assume the exact DLS 26 control mapping or activation timing. Verify the relevant control from reliable in-game evidence or user confirmation before displaying control-specific instructions.
+- Include a conservative confidence threshold, alert cooldown and immediate suppression when tracking is lost or the cross is no longer dangerous.
+
+### Validation and safeguards
+- Label opponent crosses and corners in DLS 26 footage with the observed outcome: keeper catch/claim, punch, defender clearance, attacker contact, second-ball chance, goal, or unknown.
+- Evaluate claim-versus-stay recommendations separately for catches, punches and defensive challenges. Measure decision precision, unsafe rush recommendations, missed claim opportunities, alert timing and false alerts.
+- Validate on held-out footage and on the target Infinix Smart 9; monitor processing latency, heat, battery and game responsiveness.
+- Keep keeper-decision alerts local and private in the companion overlay by default. Never modify the game, automate input, intercept traffic or claim guaranteed catches.
