@@ -21,7 +21,6 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.view.WindowManager
-import kotlin.math.roundToInt
 
 /**
  * User-authorised, local-only screen capture foundation.
@@ -184,28 +183,13 @@ class LiveCaptureService : Service() {
 
     private fun measureAverageBrightness(image: android.media.Image): Int {
         val plane = image.planes.firstOrNull() ?: return -1
-        val buffer = plane.buffer
-        val pixelStride = plane.pixelStride
-        val rowStride = plane.rowStride
-        if (pixelStride < 3 || image.width < 1 || image.height < 1) return -1
-        val steps = 24
-        var total = 0L
-        var count = 0
-        for (row in 0 until steps) {
-            val y = (row * image.height / steps).coerceAtMost(image.height - 1)
-            for (column in 0 until steps) {
-                val x = (column * image.width / steps).coerceAtMost(image.width - 1)
-                val offset = y * rowStride + x * pixelStride
-                if (offset >= 0 && offset + 2 < buffer.limit()) {
-                    val red = buffer.get(offset).toInt() and 0xff
-                    val green = buffer.get(offset + 1).toInt() and 0xff
-                    val blue = buffer.get(offset + 2).toInt() and 0xff
-                    total += (0.2126 * red + 0.7152 * green + 0.0722 * blue).roundToInt()
-                    count++
-                }
-            }
-        }
-        return if (count == 0) -1 else (total / count).toInt()
+        return CaptureFrameMetrics.averageBrightness(
+            buffer = plane.buffer,
+            width = image.width,
+            height = image.height,
+            rowStride = plane.rowStride,
+            pixelStride = plane.pixelStride
+        )
     }
 
     private fun persistFrameDiagnostics(width: Int, height: Int) {
