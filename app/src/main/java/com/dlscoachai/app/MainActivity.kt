@@ -109,7 +109,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 captureRequested = true
             } catch (error: Exception) {
                 captureRequested = false
-                Toast.makeText(context, "Could not start capture: \${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Could not start capture: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         } else {
             captureRequested = false
