@@ -1135,7 +1135,7 @@ fun squadBalanceAdvice(players: List<Player>): List<String> {
 }
 
 fun compareRecentPeriods(matches: List<Match>): List<String> {
-    if (matches.size < 6) return listOf("Log at least six matches to compare the latest five with the previous five.")
+    if (matches.size < 10) return listOf("Log at least ten matches to compare the latest five with the previous five.")
     val recent = matches.take(5)
     val previous = matches.drop(5).take(5)
     fun averageScored(period: List<Match>) = period.sumOf { it.scored }.toDouble() / period.size
@@ -1144,7 +1144,7 @@ fun compareRecentPeriods(matches: List<Match>): List<String> {
     val scoredChange = averageScored(recent) - averageScored(previous)
     val concededChange = averageConceded(recent) - averageConceded(previous)
     val winChange = winRate(recent) - winRate(previous)
-    fun signed(value: Double) = (if (value > 0) "+" else "") + "%.1f".format(value)
+    fun signed(value: Double) = (if (value > 0) "+" else "") + String.format(java.util.Locale.US, "%.1f", value)
     val result = mutableListOf<String>()
     result += "Latest five vs previous five: goals scored per match ${signed(scoredChange)}, goals conceded per match ${signed(concededChange)}, win rate ${signed(winChange)} percentage points."
     when {
