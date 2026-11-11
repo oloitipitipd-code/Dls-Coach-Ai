@@ -84,7 +84,7 @@ class TacticalEventInsightsTest {
         val latest = List(5) { Match("Loss", 0, 2, "[COUNTER]") }
         val previous = List(5) { Match("Win", 2, 0, "") }
         val insights = tacticalEventInsights(latest + previous)
-        assertEquals(true, insights.any { it.contains("Opponent counter-attacks: 1 in the latest 5") && it.contains("up from 0 in the previous five") })
+        assertEquals(true, insights.any { it.contains("Opponent counter-attacks: 5 in the latest 5") && it.contains("up from 0 in the previous five") })
     }
 
     @Test
