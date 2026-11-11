@@ -2,6 +2,7 @@ package com.dlscoachai.app
 
 import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CaptureFrameMetricsTest {
