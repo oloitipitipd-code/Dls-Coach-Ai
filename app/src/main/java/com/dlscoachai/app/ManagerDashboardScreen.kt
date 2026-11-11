@@ -69,14 +69,21 @@ fun ManagerDashboardScreen(
                 if (recommendations.isEmpty()) {
                     Text("No recommendations are available yet.")
                 } else recommendations.forEach { recommendation ->
-                    val alreadyRecorded = decisions.any { it.text == recommendation && it.status == "APPROVED" }
+                    val latestDecision = decisions.firstOrNull { it.text == recommendation }
+                    val alreadyRecorded = latestDecision?.status in setOf("APPROVED", "TESTED")
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(recommendation)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(enabled = !alreadyRecorded, onClick = {
                                 decisions = listOf(ManagerDecision(recommendation, "APPROVED", System.currentTimeMillis())) + decisions
                                 prefs.edit().putString("manager_decisions", saveManagerDecisions(decisions)).apply()
-                            }) { Text(if (alreadyRecorded) "Approved" else "Approve to test") }
+                            }) { Text(if (latestDecision?.status == "TESTED") "Tested" else if (alreadyRecorded) "Approved" else "Approve to test") }
+                            if (latestDecision?.status == "APPROVED") {
+                                TextButton(onClick = {
+                                    decisions = listOf(ManagerDecision(recommendation, "TESTED", System.currentTimeMillis())) + decisions
+                                    prefs.edit().putString("manager_decisions", saveManagerDecisions(decisions)).apply()
+                                }) { Text("Mark tested") }
+                            }
                             TextButton(onClick = {
                                 decisions = listOf(ManagerDecision(recommendation, "DISMISSED", System.currentTimeMillis())) + decisions
                                 prefs.edit().putString("manager_decisions", saveManagerDecisions(decisions)).apply()
@@ -120,7 +127,7 @@ private fun loadManagerDecisions(raw: String): List<ManagerDecision> = runCatchi
         val text = item.optString("text").take(300)
         val status = item.optString("status")
         val time = item.optLong("time", 0L)
-        if (text.isBlank() || status !in setOf("APPROVED", "DISMISSED")) null
+        if (text.isBlank() || status !in setOf("APPROVED", "DISMISSED", "TESTED")) null
         else ManagerDecision(text, status, time)
     }.take(100)
 }.getOrDefault(emptyList())
