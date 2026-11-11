@@ -62,6 +62,17 @@ fun DlsCoachApp() {
         }
     }
 
+    val squadImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            val share = Intent(Intent.ACTION_SEND).apply {
+                type = context.contentResolver.getType(uri) ?: "image/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(share, "Send squad screenshot to ChatGPT for review"))
+        }
+    }
+
     MaterialTheme(colorScheme = lightColorScheme(
         primary = androidx.compose.ui.graphics.Color(0xFF126B4A),
         secondary = androidx.compose.ui.graphics.Color(0xFF456B5B),
@@ -93,7 +104,13 @@ fun DlsCoachApp() {
         ) { padding ->
             when (tab) {
                 0 -> HomeScreen(players, matches, formation, style, Modifier.padding(padding))
-                1 -> SquadScreen(players, onAdd = { showPlayerDialog = true }, onDelete = { players = players - it }, modifier = Modifier.padding(padding))
+                1 -> SquadScreen(
+                    players,
+                    onAdd = { showPlayerDialog = true },
+                    onDelete = { players = players - it },
+                    onUploadScreenshot = { squadImagePicker.launch(arrayOf("image/*")) },
+                    modifier = Modifier.padding(padding)
+                )
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, { mediaPicker.launch(arrayOf("image/*", "video/*")) }, Modifier.padding(padding))
                 else -> CoachScreen(players, matches, formation, style, onShare = {
@@ -166,13 +183,26 @@ fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SquadScreen(players: List<Player>, onAdd: () -> Unit, onDelete: (Player) -> Unit, modifier: Modifier = Modifier) {
+fun SquadScreen(
+    players: List<Player>,
+    onAdd: () -> Unit,
+    onDelete: (Player) -> Unit,
+    onUploadScreenshot: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Page(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Squad Lab", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             Button(onClick = onAdd) { Text("Add player") }
         }
+        OutlinedButton(onClick = onUploadScreenshot, modifier = Modifier.fillMaxWidth()) {
+            Text("Upload squad screenshot for AI review")
+        }
+        Text(
+            "Choose a screenshot of your DLS 26 team. Android will let you share it with ChatGPT for image-based analysis. This app does not analyse images by itself.",
+            style = MaterialTheme.typography.bodySmall
+        )
         if (players.isEmpty()) {
             Text("Your squad is empty. Add players with their real positions and ratings.")
         } else {
@@ -235,7 +265,7 @@ fun MatchesScreen(matches: List<Match>, onAdd: () -> Unit, onImport: () -> Unit,
                 }
             }
         }
-        Text("Footage is shared through Android's share sheet. Choose ChatGPT if available; the app does not read or analyse game footage by itself.", style = MaterialTheme.typography.bodySmall)
+        Text("Tap Import footage, choose a match recording or screenshot, then select ChatGPT in Android's share menu if available. This app passes the file to ChatGPT; it does not analyse video on its own.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
