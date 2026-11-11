@@ -1081,9 +1081,14 @@ fun decodeBackup(raw: String): CoachBackup {
     val matches = loadMatches(matchArray.toString())
     require(players.size == playerArray.length()) { "One or more player records could not be read." }
     require(matches.size == matchArray.length()) { "One or more match records could not be read." }
-    require(players.all { it.name.isNotBlank() && it.rating in 1..100 }) {
-        "The backup contains invalid player names or ratings."
-    }
+    val supportedPositions = setOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST", "UNK")
+    require(players.all { player ->
+        player.name.isNotBlank() && player.rating in 1..100 && player.position in supportedPositions &&
+            (!player.statsKnown || listOf(
+                player.spe, player.acc, player.sta, player.str, player.con,
+                player.pas, player.sho, player.tac, player.gkr, player.gkh
+            ).all { it in 1..100 })
+    }) { "The backup contains invalid player names, positions, ratings or verified attributes." }
     require(matches.all { match ->
         match.result in setOf("Win", "Draw", "Loss") && match.scored in 0..99 && match.conceded in 0..99
     }) { "The backup contains invalid match result or score data." }
