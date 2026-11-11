@@ -2,7 +2,7 @@
 Standalone Android companion for Dream League Soccer 2026. Core features run inside this app and do not require ChatGPT, an OpenAI account, or cloud AI.
 
 ## Build
-A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`.
+A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`. Current app version: 1.4.0 (version code 5).
 
 ## Current capabilities
 - Local squad records and editable player profiles
@@ -15,6 +15,11 @@ A debug APK is built by the GitHub Actions workflow in `.github/workflows/androi
 
 ## Live capture status and limitations
 The live companion requests Android MediaProjection permission, creates a foreground capture service, scales frames to a maximum long edge of 960 pixels, and samples them locally. Bundled ML Kit OCR reads visible text on-device at a limited sampling rate; raw frames are not saved or uploaded and audio is not captured. OCR is not yet gameplay-event recognition and does not generate validated tactical alerts or control DLS. Capture can be stopped from the app or its persistent Android notification. Real-device behaviour, OCR accuracy, frame rate, heat, battery use and game responsiveness still require testing on the target phone.
+
+## Optional integrations (version 1.4.0)
+- **GitHub:** the Connect screen can query the latest public GitHub Actions workflow status and open the repository/build page. This is read-only, user-triggered and does not request a GitHub login or token.
+- **ChatGPT:** the user can manually share a generated coaching report through Android's share menu and select ChatGPT if installed. The app does not require ChatGPT and does not send reports automatically.
+- Both integrations are optional. Core squad, tactics, match logging and local analysis remain on-device. The GitHub status check requires an internet connection; manual report sharing requires the user to choose a receiving app.
 
 ## Important limitations
 OCR is fallible. Extracted player names and ratings are drafts and require user review; positions and attributes are not inferred when they are not clearly visible. Full match-video event analysis is not yet implemented. The app does not modify DLS, automate gameplay, spend in-game currency, or guarantee wins.
