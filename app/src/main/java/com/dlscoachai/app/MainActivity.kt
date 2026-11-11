@@ -53,7 +53,7 @@ data class Player(
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String, val scorers: List<String> = emptyList(), val assists: List<String> = emptyList())
 data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
-data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
+data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList(), val managerData: String = "{}")
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
 
 fun parseLiveSquadCandidates(raw: String): List<LiveSquadCandidate> = runCatching {
@@ -243,7 +243,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(encodeBackup(players, matches, formation, style, progressEntries).toByteArray(Charsets.UTF_8))
+                stream.write(encodeBackup(players, matches, formation, style, progressEntries, exportManagerData(prefs)).toByteArray(Charsets.UTF_8))
             } ?: error("Could not open the selected destination.")
         }.onSuccess {
             Toast.makeText(context, "Backup exported successfully.", Toast.LENGTH_LONG).show()
@@ -263,6 +263,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             progressEntries = backup.progress
             formation = backup.formation
             style = backup.style
+            restoreManagerData(prefs, backup.managerData)
             Toast.makeText(context, "Backup restored successfully.", Toast.LENGTH_LONG).show()
         }.onFailure {
             Toast.makeText(context, "Restore failed: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -1031,22 +1032,23 @@ fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
         .toList()
 }
 
-fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String =
+fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList(), managerData: String = "{}"): String =
     JSONObject()
         .put("app", "DLS Coach AI")
-        .put("schemaVersion", 2)
+        .put("schemaVersion", 3)
         .put("exportedAt", System.currentTimeMillis())
         .put("players", JSONArray(savePlayers(players)))
         .put("matches", JSONArray(saveMatches(matches)))
         .put("progress", JSONArray(saveProgress(progress)))
         .put("formation", formation)
         .put("style", style)
+        .put("managerData", JSONObject(managerData))
         .toString(2)
 
 fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
-    require(root.optInt("schemaVersion", -1) in 1..2) { "Unsupported backup version." }
+    require(root.optInt("schemaVersion", -1) in 1..3) { "Unsupported backup version." }
     val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
     val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
     require(players.isNotEmpty()) { "The backup contains no readable player records." }
@@ -1055,7 +1057,8 @@ fun decodeBackup(raw: String): CoachBackup {
         matches = matches,
         progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]"),
         formation = root.optString("formation", "5-3-2"),
-        style = root.optString("style", "Aggressive attack + compact defence")
+        style = root.optString("style", "Aggressive attack + compact defence"),
+        managerData = root.optJSONObject("managerData")?.toString() ?: "{}"
     )
 }
 
