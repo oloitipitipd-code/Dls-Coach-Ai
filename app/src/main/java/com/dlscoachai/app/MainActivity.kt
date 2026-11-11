@@ -331,7 +331,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, { mediaPicker.launch(arrayOf("image/*", "video/*")) }, Modifier.padding(padding))
                 else -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
-                    val report = buildCoachReport(players, matches, formation, style)
+                    val report = buildCoachReport(players, matches, formation, style, progressEntries)
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_SUBJECT, "DLS Coach AI - Match & Squad Report")
@@ -1164,11 +1164,12 @@ fun nextCoachingActions(players: List<Player>, matches: List<Match>, formation: 
     return actions.distinct().take(3)
 }
 
-fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String): String {
+fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String {
     val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") {
         "- ${it.name}: ${it.position}, OVR ${it.rating}; SPE ${it.spe}, ACC ${it.acc}, STA ${it.sta}, STR ${it.str}, CON ${it.con}, PAS ${it.pas}, SHO ${it.sho}, TAC ${it.tac}, GKR ${it.gkr}, GKH ${it.gkh}"
     }
     val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { "- ${it.result} ${it.scored}-${it.conceded}: ${it.note}" }
+    val development = if (progress.isEmpty()) "No player development snapshots recorded." else progress.take(30).joinToString("\n") { "- ${it.playerName}: OVR ${it.rating}, ${it.attribute} ${it.attributeValue}, ${java.text.DateFormat.getDateInstance().format(java.util.Date(it.recordedAt))} ${it.note}" }
     return """DLS COACH AI — COACHING REVIEW
 Game: Dream League Soccer 2026
 Mode: Dream League Live
@@ -1181,6 +1182,9 @@ $squad
 
 RECENT MATCHES
 $games
+
+PLAYER DEVELOPMENT SNAPSHOTS
+$development
 
 Please analyse only the evidence provided. Identify the biggest tactical and squad weaknesses, recommend a suitable formation and starting XI from the listed players, explain defensive problems and attacking movement, and give me three specific changes to test. Do not invent player attributes or claim to have watched footage that is not attached."""
 }
