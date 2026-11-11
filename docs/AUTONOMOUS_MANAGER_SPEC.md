@@ -527,3 +527,10 @@ External services are optional helpers, never dependencies for core coaching:
 - **Offline-first:** squad records, match history, tactics and local coaching features must continue to work if internet access is unavailable or either optional service is absent. The GitHub status check requires internet; ChatGPT report review requires an installed receiving app and an explicit user share action.
 - **Credentials:** never embed GitHub tokens, OpenAI API keys or account passwords in the APK. Do not request credentials for the current read-only GitHub check or manual ChatGPT share.
 - **Future integrations:** any authenticated GitHub workflow, cloud AI analysis or automatic synchronisation requires a separate, secure design, clear data disclosure, cost disclosure where relevant, and explicit user opt-in. Do not imply these future functions exist until implemented and tested.
+
+
+## DLS game launcher and settings profile — version 1.5.0
+
+The Game Link screen uses Android's launcher-intent visibility to look for an installed launcher activity whose visible app label contains "Dream League Soccer". If found, it launches that activity using a normal Android intent. This is app discovery and launch, not a privileged game integration. The screen reuses the existing user-authorised MediaProjection controls and lets the user record their own camera, graphics/performance, controls, sound and other settings notes in local preferences.
+
+The settings profile does not write into DLS or apply values automatically. DLS internal settings, account state, live game state and player data remain outside the app's direct control unless First Touch Games supplies a documented supported interface. OCR remains limited to visible text and must not be represented as reliable gameplay understanding. Keep all game-control, input-injection, private-file and reverse-engineering restrictions in force.
