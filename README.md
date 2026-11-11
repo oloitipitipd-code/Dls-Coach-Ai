@@ -31,3 +31,6 @@ The intended design is English-only, evidence-led, and local-first. Any future c
 - Full recruitment, development, tactical and quality-assurance requirements are in [the final quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md#final-quality-squad-standard--recruitment-development-and-team-balance).
 ## Engineering checks
 The CI workflow runs JVM unit tests for the capture-frame brightness helper before assembling the debug APK. These tests validate pixel-stride handling, row padding, invalid dimensions and short buffers; they do not replace real-device capture, battery, heat or game-performance testing.
+
+## Player development and team trends
+The Performance Centre supports dated, manually verified player-card snapshots (overall rating plus one selected attribute), comparison of first and latest records, and inclusion of development history in backups and coaching reports. Team analysis compares the latest five logged matches with the previous five when at least ten results are available. These are descriptive trends from user-entered records, not causal proof or live game telemetry.
