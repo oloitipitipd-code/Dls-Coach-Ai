@@ -39,6 +39,10 @@ The inspected `LiveCaptureService` samples a screen frame about once per second 
 
 The existing settings profile is notes only: it does not write settings into DLS. Opening DLS via its normal Android launcher activity is not privileged account integration.
 
+## Management dashboard implementation update — 11 November 2026
+
+A local Manager tab has been added on the development branch. It records user-entered resource snapshots (coins, gems, available coaches and unclaimed gifts), timestamps the latest snapshot, presents coaching recommendations for approval or dismissal, and stores a local decision history. This is a management workflow over user-confirmed information, not a direct account connector. No resource value is read from DLS automatically, and approval does not trigger any in-game action. The resource ledger and decision history are currently held in SharedPreferences and are not yet part of the JSON backup schema; this limitation must be addressed before treating them as durable backup data.
+
 ## Capability and permission matrix
 
 | Capability | Current status | Safe product treatment |
