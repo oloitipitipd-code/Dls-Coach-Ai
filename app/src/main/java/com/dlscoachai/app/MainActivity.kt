@@ -40,7 +40,8 @@ data class Player(
     val sho: Int = 50,
     val tac: Int = 50,
     val gkr: Int = 50,
-    val gkh: Int = 50
+    val gkh: Int = 50,
+    val statsKnown: Boolean = false
 )
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
@@ -58,7 +59,9 @@ fun DlsCoachApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
-    var players by remember { mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]")) }
+    var players by remember {
+        mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
+    }
     var matches by remember { mutableStateOf(loadMatches(prefs.getString("matches", "[]") ?: "[]")) }
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
@@ -274,9 +277,13 @@ fun SquadScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(player.name, fontWeight = FontWeight.Bold)
                                 Text("${player.position}  •  OVR ${player.rating}", style = MaterialTheme.typography.bodySmall)
-                                Text("SPE ${player.spe} · ACC ${player.acc} · STA ${player.sta} · STR ${player.str}", style = MaterialTheme.typography.labelSmall)
-                                Text("CON ${player.con} · PAS ${player.pas} · SHO ${player.sho} · TAC ${player.tac}", style = MaterialTheme.typography.labelSmall)
-                                if (player.position == "GK") Text("GKR ${player.gkr} · GKH ${player.gkh}", style = MaterialTheme.typography.labelSmall)
+                                if (player.statsKnown) {
+                                    Text("SPE ${player.spe} · ACC ${player.acc} · STA ${player.sta} · STR ${player.str}", style = MaterialTheme.typography.labelSmall)
+                                    Text("CON ${player.con} · PAS ${player.pas} · SHO ${player.sho} · TAC ${player.tac}", style = MaterialTheme.typography.labelSmall)
+                                    if (player.position == "GK") Text("GKR ${player.gkr} · GKH ${player.gkh}", style = MaterialTheme.typography.labelSmall)
+                                } else {
+                                    Text("Attributes not verified yet", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                                }
                             }
                             TextButton(onClick = { onDelete(player) }) { Text("Remove") }
                         }
@@ -471,7 +478,8 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
             if (name.isNotBlank() && value != null && value in 1..100 && numbers.all { it != null && it in 1..100 }) {
                 onAdd(Player(name.trim(), position, value,
                     numbers[0]!!, numbers[1]!!, numbers[2]!!, numbers[3]!!, numbers[4]!!,
-                    numbers[5]!!, numbers[6]!!, numbers[7]!!, numbers[8]!!, numbers[9]!!
+                    numbers[5]!!, numbers[6]!!, numbers[7]!!, numbers[8]!!, numbers[9]!!,
+                    statsKnown = true
                 ))
             }
         }) { Text("Save player") } },
@@ -509,13 +517,28 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
     )
 }
 
+fun initialSquad(): List<Player> = listOf(
+    Player("Kylian Mbappé", "UNK", 96), Player("Erling Haaland", "UNK", 96),
+    Player("Mohamed Salah", "UNK", 95), Player("Vinícius Jr", "UNK", 95),
+    Player("Raphinha", "UNK", 95), Player("Michael Olise", "UNK", 96),
+    Player("Ousmane Dembélé", "UNK", 96), Player("Gabriel Batistuta", "UNK", 95),
+    Player("Jude Bellingham", "UNK", 95), Player("Rodri", "UNK", 95),
+    Player("Vitinha", "UNK", 95), Player("Federico Valverde", "UNK", 95),
+    Player("Pedri", "UNK", 94), Player("Kevin De Bruyne", "UNK", 93),
+    Player("Lothar Matthäus", "UNK", 91), Player("Virgil van Dijk", "UNK", 95),
+    Player("William Saliba", "UNK", 94), Player("Marcel Desailly", "UNK", 93),
+    Player("Achraf Hakimi", "UNK", 95), Player("Gabriel", "UNK", 90),
+    Player("Matthijs de Ligt", "UNK", 90), Player("Andrew Robertson", "UNK", 90),
+    Player("Reece James", "UNK", 86)
+)
+
 fun savePlayers(players: List<Player>): String = JSONArray().apply {
     players.forEach { p ->
         put(JSONObject()
             .put("name", p.name).put("position", p.position).put("rating", p.rating)
             .put("spe", p.spe).put("acc", p.acc).put("sta", p.sta).put("str", p.str)
             .put("con", p.con).put("pas", p.pas).put("sho", p.sho).put("tac", p.tac)
-            .put("gkr", p.gkr).put("gkh", p.gkh))
+            .put("gkr", p.gkr).put("gkh", p.gkh).put("statsKnown", p.statsKnown))
     }
 }.toString()
 
@@ -528,7 +551,8 @@ fun loadPlayers(raw: String): List<Player> = runCatching {
             o.optString("name"), o.optString("position"), rating,
             o.optInt("spe", rating), o.optInt("acc", rating), o.optInt("sta", rating),
             o.optInt("str", rating), o.optInt("con", rating), o.optInt("pas", rating),
-            o.optInt("sho", rating), o.optInt("tac", rating), o.optInt("gkr", rating), o.optInt("gkh", rating)
+            o.optInt("sho", rating), o.optInt("tac", rating), o.optInt("gkr", rating), o.optInt("gkh", rating),
+            o.optBoolean("statsKnown", false)
         )
     }
 }.getOrDefault(emptyList())
@@ -627,6 +651,7 @@ fun tacticalAdvice(formation: String, style: String): List<String> {
 }
 
 fun developmentFocus(player: Player): List<String> {
+    if (!player.statsKnown) return listOf("Enter verified card attributes before setting a development priority.")
     val priorities = when (player.position) {
         "GK" -> listOf("GKR" to player.gkr, "GKH" to player.gkh, "STA" to player.sta, "STR" to player.str)
         "CB", "LB", "RB" -> listOf("TAC" to player.tac, "STR" to player.str, "SPE" to player.spe, "STA" to player.sta, "PAS" to player.pas)
