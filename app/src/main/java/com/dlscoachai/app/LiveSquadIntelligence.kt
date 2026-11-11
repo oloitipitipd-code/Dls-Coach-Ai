@@ -20,7 +20,7 @@ data class LiveScreenAnalysis(
 )
 
 object LiveSquadIntelligence {
-    private val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9]?[0-9])$")
+    private val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9][0-9]?)$")
     private val ignored = setOf(
         "overall rating", "rating", "speed", "acceleration", "stamina",
         "strength", "control", "passing", "shooting", "tackling",
