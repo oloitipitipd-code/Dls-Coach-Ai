@@ -451,3 +451,60 @@ Before recommending recruitment, compare the candidate with current squad player
 - Whether the candidate has a credible development pathway toward 97+ or, if not, still provides enough immediate role value to justify recruitment.
 
 Classify each candidate as **strong squad upgrade**, **useful depth**, **situational option**, or **do not recruit**. Explain the specific squad benefit and the evidence. Do not recommend a signing solely because of overall rating, popularity, name or speculative potential. If the candidate does not improve the squad enough to justify the cost, recommend saving resources.
+
+
+## Final quality-squad standard — recruitment, development and team balance
+
+This section consolidates the user's standing squad-building rules and takes precedence over any conflicting generic recruitment wording elsewhere in this document.
+
+### Non-negotiable recruitment gate
+1. **Minimum overall rating: 80.** Do not recommend a player below 80 unless the user explicitly changes this threshold.
+2. **Squad benefit is mandatory.** An 80+ rating alone never justifies recruitment. The candidate must solve a documented squad weakness, improve the starting XI, provide valuable role-specific depth, or add a clearly useful tactical option.
+3. Compare the candidate directly with the user's current players in the same position/role. Explain who the candidate would replace or cover, what improves, and what trade-off remains.
+4. Reject unnecessary duplicates when a more important position remains weak. If no candidate offers enough value for the cost, recommend saving resources.
+5. Use only visible, verified card data and user-confirmed costs. Unknown attributes, prices, availability and potential must remain unknown.
+
+### Team-quality assessment
+Assess the squad as a complete team, not as a collection of high-rated cards:
+- **Goalkeeper:** verified goalkeeper reactions and handling, with the best available keeper selected for the role.
+- **Centre-backs:** role-appropriate tackling, strength, speed, stamina and defensive cover.
+- **Fullbacks/wingbacks:** speed, stamina, tackling and useful passing/crossing, balanced against the space they leave behind.
+- **Defensive midfield:** tackling, strength, stamina, passing and ability to protect the back line.
+- **Central/attacking midfield:** passing, control, stamina, progression and support for both attack and defence.
+- **Wingers/forwards:** speed, acceleration, control, passing/crossing and finishing according to the intended role.
+- **Strikers:** finishing, control, speed and acceleration, with role fit and chance creation considered.
+- Evaluate left/right balance, natural-position coverage, substitutes, fatigue options and tactical flexibility.
+- Preserve the user's preferred identity: aggressive attacking with strong defensive protection. Do not maximise attack by leaving the defence exposed.
+
+### 97+ development pathway
+- **97+ is the preferred long-term overall target**, but it is not a guaranteed or universal maximum.
+- Recruit 80+ players only when they provide sufficient immediate squad value. Separately identify which recruits have a credible 97+ development pathway under the actual card-specific DLS 26 rules.
+- Do not label an 80–86 player as a 97+ prospect based solely on the unverified community-reported +10 rule. If that +10 limit is confirmed for the specific card, explain that the resulting ceiling would be 90–96; a starting rating of 87 or above would be needed for 97+ under that assumption.
+- If a player cannot credibly reach 97+, the player may still be recruited for an important immediate role or useful depth when the value justifies the cost. Do not waste resources solely to chase a number.
+- Track original rating, current permanent rating, visible attributes, card type, each actual coach outcome and resource cost. Keep temporary Form Boosts separate.
+- Standard coaches may select a random eligible player. Never promise that a particular player will receive an upgrade. User confirms and performs all in-game actions.
+- Stop at the maximum evidenced by the current game/card. Report the actual final rating, even when it is below 97.
+
+### Recruitment decision report
+For every shortlisted player, show:
+- Eligibility: 80+ confirmed or not eligible.
+- Position and intended role.
+- Current squad comparison and exact weakness addressed.
+- Visible attribute advantages and disadvantages.
+- Effect on starting XI, bench depth and tactical balance.
+- Cost/opportunity cost, only when confirmed.
+- Development pathway: 97+ plausible, unverified, or not supported by current evidence.
+- Final decision: **SIGN — STRONG UPGRADE**, **SIGN — USEFUL DEPTH**, **CONSIDER — SITUATIONAL**, or **DO NOT SIGN — SAVE RESOURCES**.
+
+### Quality assurance before calling a squad “strong”
+Do not call a squad optimised or complete until:
+- At least 11 confirmed players and their natural positions are recorded.
+- The proposed XI contains no duplicate player and uses players in defensible roles.
+- The most important positional weaknesses and depth gaps are disclosed.
+- The starting XI and substitutes are compared against the chosen aggressive-attacking/strong-defence style.
+- Unconfirmed OCR fields and missing attributes are clearly flagged.
+- Recommendations explain evidence and trade-offs; no fabricated ratings, stats, prices or guarantees.
+- The app's actual implementation is distinguished from planned features. A specification, mock-up or recommendation algorithm is not proof that live vision, automatic recruitment, player upgrades or other features are implemented.
+
+### Current product truth
+The current Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, basic development priorities, on-device OCR text extraction for review, and sharing match evidence/report text. OCR does not yet create player records automatically. Match footage is shared for external review; the app does not perform in-app video analysis. Live screen capture, live computer vision, private tactical overlay, voice coaching, automated structured squad extraction, persistent coach-outcome development ledger and recruitment-market integration are not implemented in the inspected app version. Do not describe any of those as working until code is added and a successful build plus device testing confirms it.
