@@ -3,6 +3,7 @@ package com.dlscoachai.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -45,6 +46,7 @@ data class Player(
 )
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
+data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +88,34 @@ fun DlsCoachApp() {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(share, "Share match evidence for coaching review"))
+        }
+    }
+
+    val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { stream ->
+                stream.write(encodeBackup(players, matches, formation, style).toByteArray(Charsets.UTF_8))
+            } ?: error("Could not open the selected destination.")
+        }.onSuccess {
+            Toast.makeText(context, "Backup exported successfully.", Toast.LENGTH_LONG).show()
+        }.onFailure {
+            Toast.makeText(context, "Backup export failed: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val importBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) runCatching {
+            val raw = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                ?: error("Could not read the selected backup.")
+            decodeBackup(raw)
+        }.onSuccess { backup ->
+            players = backup.players
+            matches = backup.matches
+            formation = backup.formation
+            style = backup.style
+            Toast.makeText(context, "Backup restored successfully.", Toast.LENGTH_LONG).show()
+        }.onFailure {
+            Toast.makeText(context, "Restore failed: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -146,7 +176,11 @@ fun DlsCoachApp() {
             }
         ) { padding ->
             when (tab) {
-                0 -> HomeScreen(players, matches, formation, style, Modifier.padding(padding))
+                0 -> HomeScreen(players, matches, formation, style,
+                    onExport = { exportBackupPicker.launch("DLS-Coach-AI-backup.json") },
+                    onImport = { importBackupPicker.launch(arrayOf("application/json", "text/*")) },
+                    modifier = Modifier.padding(padding)
+                )
                 1 -> SquadScreen(
                     players,
                     onAdd = { showPlayerDialog = true },
@@ -210,7 +244,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -232,7 +266,13 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
                 Text("Attack aggressively with structure: keep midfield cover behind the ball and avoid pulling centre-backs out of position.")
             }
         }
-        Text("Start by adding your actual players and logging match results. Recommendations become more useful as your data improves.", style = MaterialTheme.typography.bodySmall)
+        Text("DATA SAFETY", fontWeight = FontWeight.Bold)
+        Text("Your squad and match history are stored on this device. Export a backup before changing phones or reinstalling the app.")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) { Text("Export backup") }
+            OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) { Text("Restore backup") }
+        }
+        Text("Recommendations become more useful as verified player attributes and match evidence are added.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -514,6 +554,32 @@ fun AddMatchDialog(onDismiss: () -> Unit, onAdd: (Match) -> Unit) {
             if (a != null && b != null) onAdd(Match(result, a, b, note.trim()))
         }) { Text("Save match") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String): String =
+    JSONObject()
+        .put("app", "DLS Coach AI")
+        .put("schemaVersion", 1)
+        .put("exportedAt", System.currentTimeMillis())
+        .put("players", JSONArray(savePlayers(players)))
+        .put("matches", JSONArray(saveMatches(matches)))
+        .put("formation", formation)
+        .put("style", style)
+        .toString(2)
+
+fun decodeBackup(raw: String): CoachBackup {
+    val root = JSONObject(raw)
+    require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
+    require(root.optInt("schemaVersion", -1) == 1) { "Unsupported backup version." }
+    val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
+    val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
+    require(players.isNotEmpty()) { "The backup contains no readable player records." }
+    return CoachBackup(
+        players = players,
+        matches = matches,
+        formation = root.optString("formation", "5-3-2"),
+        style = root.optString("style", "Aggressive attack + compact defence")
     )
 }
 
