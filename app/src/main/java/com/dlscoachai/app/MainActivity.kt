@@ -108,6 +108,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var captureRequested by remember { mutableStateOf(prefs.getBoolean("capture_active", false)) }
     var captureStatus by remember { mutableStateOf(prefs.getString("capture_status", "Not started") ?: "Not started") }
     var captureFrames by remember { mutableLongStateOf(prefs.getLong("capture_frames", 0L)) }
@@ -332,13 +333,35 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "✓", "▶", "↔")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤")[index]) },
                             label = { Text(label) }
                         )
+                    }
+                    Box {
+                        NavigationBarItem(
+                            selected = tab >= 4,
+                            onClick = { showMoreMenu = true },
+                            icon = { Text("⋯") },
+                            label = { Text("More") }
+                        )
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            listOf("Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        tab = index + 4
+                                        showMoreMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
