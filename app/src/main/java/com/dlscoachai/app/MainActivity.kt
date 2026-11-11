@@ -314,6 +314,20 @@ fun SquadScreen(
         OutlinedButton(onClick = onUploadScreenshot, modifier = Modifier.fillMaxWidth()) {
             Text("Upload squad screenshot — scan inside app")
         }
+        val unknownPositions = players.count { it.position == "UNK" }
+        val verifiedProfiles = players.count { it.position != "UNK" && it.statsKnown }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("SQUAD DATA QUALITY", fontWeight = FontWeight.Bold)
+                Text("$verifiedProfiles / ${players.size} complete profiles")
+                Text("$unknownPositions positions still need confirmation · ${players.count { !it.statsKnown }} attribute sets unverified")
+                LinearProgressIndicator(
+                    progress = { if (players.isEmpty()) 0f else verifiedProfiles.toFloat() / players.size },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text("Edit a player to confirm their natural position and enter exact card attributes. The coach avoids treating missing data as fact.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
         Text(
             "Choose a DLS 26 screenshot. The app reads visible text on your phone using on-device OCR, then shows the result for you to verify. It does not guess unreadable attributes or automatically create player records yet.",
             style = MaterialTheme.typography.bodySmall
