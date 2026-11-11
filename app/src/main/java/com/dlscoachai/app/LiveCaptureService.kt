@@ -33,7 +33,9 @@ class LiveCaptureService : Service() {
     private var imageReader: ImageReader? = null
     private var workerThread: HandlerThread? = null
     private var frameCount = 0
+    private var lastSampleMs = 0L
     private var lastNotificationUpdateMs = 0L
+    private val sampleIntervalMs = 1_000L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -88,20 +90,27 @@ class LiveCaptureService : Service() {
             val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
             val density = metrics.densityDpi
 
+            frameCount = 0
+            lastSampleMs = 0L
+            lastNotificationUpdateMs = 0L
             workerThread = HandlerThread("DlsCoachFrameSampler").also { it.start() }
             val handler = Handler(workerThread!!.looper)
             imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2).also { reader ->
                 reader.setOnImageAvailableListener({ source ->
                     val image = source.acquireLatestImage()
                     if (image != null) {
+                        // Always close the newest frame promptly, but count/process at most one sample per second.
                         image.close()
-                        frameCount++
                         val now = SystemClock.elapsedRealtime()
+                        if (lastSampleMs == 0L || now - lastSampleMs >= sampleIntervalMs) {
+                            lastSampleMs = now
+                            frameCount++
+                        }
                         if (now - lastNotificationUpdateMs >= 10_000L) {
                             lastNotificationUpdateMs = now
-                            setCaptureState(true, "Capture active · local frame sampling")
+                            setCaptureState(true, "Capture active · 1 sample/second maximum")
                             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                                .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount low-resolution frames sampled"))
+                                .notify(NOTIFICATION_ID, buildNotification("Active · $frameCount sampled frames (1/sec max)"))
                         }
                     }
                 }, handler)
