@@ -52,7 +52,8 @@ data class Player(
 )
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String)
-data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String)
+data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
+data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
 
 class MainActivity : ComponentActivity() {
@@ -154,6 +155,8 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
     }
     var matches by remember { mutableStateOf(loadMatches(prefs.getString("matches", "[]") ?: "[]")) }
+    var progressEntries by remember { mutableStateOf(loadProgress(prefs.getString("player_progress", "[]") ?: "[]")) }
+    var showProgressDialog by remember { mutableStateOf(false) }
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
@@ -201,6 +204,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
 
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
+    LaunchedEffect(progressEntries) { prefs.edit().putString("player_progress", saveProgress(progressEntries)).apply() }
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
@@ -219,7 +223,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(encodeBackup(players, matches, formation, style).toByteArray(Charsets.UTF_8))
+                stream.write(encodeBackup(players, matches, formation, style, progressEntries).toByteArray(Charsets.UTF_8))
             } ?: error("Could not open the selected destination.")
         }.onSuccess {
             Toast.makeText(context, "Backup exported successfully.", Toast.LENGTH_LONG).show()
@@ -236,6 +240,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         }.onSuccess { backup ->
             players = backup.players
             matches = backup.matches
+            progressEntries = backup.progress
             formation = backup.formation
             style = backup.style
             Toast.makeText(context, "Backup restored successfully.", Toast.LENGTH_LONG).show()
@@ -325,7 +330,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 )
                 2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, { mediaPicker.launch(arrayOf("image/*", "video/*")) }, Modifier.padding(padding))
-                else -> CoachScreen(players, matches, formation, style, onShare = {
+                else -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     val report = buildCoachReport(players, matches, formation, style)
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -356,6 +361,12 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 onDismiss = { showMatchDialog = false },
                 onAdd = { match -> matches = listOf(match) + matches; showMatchDialog = false }
             )
+        }
+        if (showProgressDialog) {
+            PlayerProgressDialog(players, onDismiss = { showProgressDialog = false }) { entry ->
+                progressEntries = listOf(entry) + progressEntries
+                showProgressDialog = false
+            }
         }
         if (showOcrDialog) {
             AlertDialog(
@@ -592,7 +603,7 @@ fun MatchesScreen(matches: List<Match>, onAdd: () -> Unit, onImport: () -> Unit,
 }
 
 @Composable
-fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onShare: () -> Unit, modifier: Modifier = Modifier) {
+fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, progressEntries: List<PlayerProgress>, onLogProgress: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
     val conceded = matches.sumOf { it.conceded }
     val scored = matches.sumOf { it.scored }
     val losses = matches.count { it.result.equals("Loss", true) }
@@ -653,6 +664,32 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
         }
         Text("TACTICAL GAME PLAN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         tips.forEach { tip -> Text("• $tip") }
+        Text("INDIVIDUAL DEVELOPMENT TRACKER", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Record visible player-card values before and after training. These are manual snapshots, not automatic game telemetry.", style = MaterialTheme.typography.bodySmall)
+        if (players.isNotEmpty()) OutlinedButton(onClick = onLogProgress, modifier = Modifier.fillMaxWidth()) { Text("Log player development") }
+        if (progressEntries.isEmpty()) {
+            Text("No records yet. Save a baseline before training, then record the player again later.")
+        } else {
+            progressEntries.groupBy { it.playerName }.forEach { (name, entries) ->
+                val ordered = entries.sortedBy { it.recordedAt }
+                val first = ordered.first()
+                val latest = ordered.last()
+                val delta = latest.rating - first.rating
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(name, fontWeight = FontWeight.Bold)
+                        Text("OVR ${first.rating} → ${latest.rating} (${if (delta > 0) "+" else ""}$delta)")
+                        Text("Latest ${latest.attribute}: ${latest.attributeValue} · ${entries.size} record(s)", style = MaterialTheme.typography.bodySmall)
+                        Text("Updated ${java.text.DateFormat.getDateInstance().format(java.util.Date(latest.recordedAt))}", style = MaterialTheme.typography.labelSmall)
+                        val previous = ordered.dropLast(1).lastOrNull { it.attribute == latest.attribute }
+                        if (previous != null) {
+                            val change = latest.attributeValue - previous.attributeValue
+                            Text("${latest.attribute} change since previous matching record: ${if (change > 0) "+" else ""}$change")
+                        }
+                    }
+                }
+            }
+        }
         Text("PLAYER DEVELOPMENT PRIORITIES", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("SMART PLAYER DEVELOPMENT", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("These are personalised training priorities from the attributes you entered. They are coaching estimates, not guaranteed in-game rating gains.", style = MaterialTheme.typography.bodySmall)
@@ -706,6 +743,54 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
         Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("Generate and share full coaching report") }
         Text("Important: this app recommends selection and training priorities. It cannot directly change player attributes, control the game or guarantee wins.", style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (PlayerProgress) -> Unit) {
+    var selectedName by remember { mutableStateOf(players.firstOrNull()?.name ?: "") }
+    var rating by remember { mutableStateOf(players.firstOrNull()?.rating?.toString() ?: "") }
+    var attribute by remember { mutableStateOf("SPE") }
+    var value by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var playerMenu by remember { mutableStateOf(false) }
+    var attributeMenu by remember { mutableStateOf(false) }
+    val attributes = listOf("SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC", "GKR", "GKH")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Log player development") },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box {
+                    OutlinedButton(onClick = { playerMenu = true }, modifier = Modifier.fillMaxWidth()) { Text(selectedName) }
+                    DropdownMenu(expanded = playerMenu, onDismissRequest = { playerMenu = false }) {
+                        players.forEach { player ->
+                            DropdownMenuItem(text = { Text("${player.name} · ${player.rating}") }, onClick = {
+                                selectedName = player.name
+                                rating = player.rating.toString()
+                                playerMenu = false
+                            })
+                        }
+                    }
+                }
+                OutlinedTextField(rating, { rating = it.filter(Char::isDigit).take(3) }, label = { Text("Current OVR (1–100)") }, singleLine = true)
+                Box {
+                    OutlinedButton(onClick = { attributeMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("Attribute: $attribute") }
+                    DropdownMenu(expanded = attributeMenu, onDismissRequest = { attributeMenu = false }) {
+                        attributes.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { attribute = item; attributeMenu = false }) }
+                    }
+                }
+                OutlinedTextField(value, { value = it.filter(Char::isDigit).take(3) }, label = { Text("$attribute value (1–100)") }, singleLine = true)
+                OutlinedTextField(note, { note = it }, label = { Text("Optional note") })
+                Text("Copy values from the actual in-game player card. Saving a record does not upgrade the player.", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = selectedName.isNotBlank() && rating.toIntOrNull() in 1..100 && value.toIntOrNull() in 1..100, onClick = {
+                onSave(PlayerProgress(selectedName, rating.toInt(), attribute, value.toInt(), System.currentTimeMillis(), note.trim()))
+            }) { Text("Save record") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
@@ -813,10 +898,11 @@ fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
 fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String): String =
     JSONObject()
         .put("app", "DLS Coach AI")
-        .put("schemaVersion", 1)
+        .put("schemaVersion", 2)
         .put("exportedAt", System.currentTimeMillis())
         .put("players", JSONArray(savePlayers(players)))
         .put("matches", JSONArray(saveMatches(matches)))
+        .put("progress", JSONArray(saveProgress(progress)))
         .put("formation", formation)
         .put("style", style)
         .toString(2)
@@ -824,13 +910,14 @@ fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String,
 fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
-    require(root.optInt("schemaVersion", -1) == 1) { "Unsupported backup version." }
+    require(root.optInt("schemaVersion", -1) in 1..2) { "Unsupported backup version." }
     val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
     val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
     require(players.isNotEmpty()) { "The backup contains no readable player records." }
     return CoachBackup(
         players = players,
         matches = matches,
+        progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]"),
         formation = root.optString("formation", "5-3-2"),
         style = root.optString("style", "Aggressive attack + compact defence")
     )
@@ -874,6 +961,24 @@ fun loadPlayers(raw: String): List<Player> = runCatching {
             o.optBoolean("statsKnown", false)
         )
     }
+}.getOrDefault(emptyList())
+
+fun saveProgress(entries: List<PlayerProgress>): String = JSONArray().apply {
+    entries.forEach { entry ->
+        put(JSONObject().put("playerName", entry.playerName).put("rating", entry.rating)
+            .put("attribute", entry.attribute).put("attributeValue", entry.attributeValue)
+            .put("recordedAt", entry.recordedAt).put("note", entry.note))
+    }
+}.toString()
+
+fun loadProgress(raw: String): List<PlayerProgress> = runCatching {
+    val array = JSONArray(raw)
+    (0 until array.length()).map { index ->
+        val item = array.getJSONObject(index)
+        PlayerProgress(item.optString("playerName"), item.optInt("rating"),
+            item.optString("attribute"), item.optInt("attributeValue"),
+            item.optLong("recordedAt"), item.optString("note"))
+    }.filter { it.playerName.isNotBlank() && it.rating in 1..100 && it.attributeValue in 1..100 }
 }.getOrDefault(emptyList())
 
 fun saveMatches(matches: List<Match>): String = JSONArray().apply {
