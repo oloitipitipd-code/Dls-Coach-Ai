@@ -99,6 +99,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureRequested by remember { mutableStateOf(prefs.getBoolean("capture_active", false)) }
     var captureStatus by remember { mutableStateOf(prefs.getString("capture_status", "Not started") ?: "Not started") }
     var captureFrames by remember { mutableLongStateOf(prefs.getLong("capture_frames", 0L)) }
+    var captureFrameWidth by remember { mutableIntStateOf(prefs.getInt("capture_frame_width", 0)) }
+    var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
+    var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -107,6 +110,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 captureRequested = prefs.getBoolean("capture_active", false)
                 captureStatus = prefs.getString("capture_status", "Not started") ?: "Not started"
                 captureFrames = prefs.getLong("capture_frames", 0L)
+                captureFrameWidth = prefs.getInt("capture_frame_width", 0)
+                captureFrameHeight = prefs.getInt("capture_frame_height", 0)
+                captureBrightness = prefs.getInt("capture_average_brightness", -1)
             }
         }
         activity?.lifecycle?.addObserver(observer)
@@ -302,6 +308,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     captureRequested = captureRequested,
                     captureStatus = captureStatus,
                     captureFrames = captureFrames,
+                    captureFrameWidth = captureFrameWidth,
+                    captureFrameHeight = captureFrameHeight,
+                    captureBrightness = captureBrightness,
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
@@ -404,7 +413,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, captureFrameWidth: Int, captureFrameHeight: Int, captureBrightness: Int, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -430,13 +439,19 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("LIVE MATCH CO-PILOT", fontWeight = FontWeight.Bold)
                 Text(captureStatus, style = MaterialTheme.typography.bodySmall)
-                Text("Frames sampled: $captureFrames", style = MaterialTheme.typography.labelSmall)
+                Text("Diagnostic samples: $captureFrames", style = MaterialTheme.typography.labelSmall)
+                if (captureFrameWidth > 0 && captureFrameHeight > 0) {
+                    Text("Captured frame: ${captureFrameWidth} × ${captureFrameHeight}px", style = MaterialTheme.typography.labelSmall)
+                }
+                if (captureBrightness >= 0) {
+                    Text("Average screen brightness: $captureBrightness / 255", style = MaterialTheme.typography.labelSmall)
+                }
                 Text(
                     if (captureRequested) "Capture is active. Use the persistent Android notification or the button below to stop it."
                     else "Start a user-authorised screen-capture session. If Android offers app-window sharing, choose DLS 26.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Text("This foundation samples frames locally and closes them immediately. It does not yet recognise match events, give live tactical advice, record video, capture audio or control the game.", style = MaterialTheme.typography.bodySmall)
+                Text("This foundation checks frame dimensions and average brightness locally, then closes each frame. These are capture-health diagnostics only—not player/ball recognition or tactical analysis. It does not record video, capture audio or control the game.", style = MaterialTheme.typography.bodySmall)
                 if (captureRequested) {
                     OutlinedButton(onClick = onStopCapture, modifier = Modifier.fillMaxWidth()) { Text("Stop capture session") }
                 } else {
