@@ -424,3 +424,16 @@ The user's squad-building target is **97+ permanent overall rating** for players
 - Track each player's permanent progress and stop when the in-game maximum is reached. Report the actual final rating, even if below 97, rather than falsifying or obscuring the result.
 - Official FTG guidance confirms that standard coaches randomly select a player for permanent upgrade and that Form Boosts are temporary. Source: https://support.ftgames.com/hc/en-us/articles/360003914778-How-do-I-develop-my-players
 - Community-reported DLS 26 +10 ceiling and example: https://dmairdls.com/blog/how-to-max-players-in-dls-26-coaches-form-boosts . Treat as secondary evidence, not official confirmation.
+
+## Recruitment threshold: 80+ overall
+
+The user's minimum recruitment threshold is **80 overall rating**.
+
+- Shortlist players rated 80 or higher; do not shortlist a player below 80 unless the user explicitly changes this rule.
+- Evaluate each 80+ candidate by position, role fit, visible attributes, squad need, resources and development potential—not overall rating alone.
+- The intended pathway is recruit 80+ players, retain suitable players and progressively apply permanent development coaches over multiple sessions.
+- Set 97+ as the preferred final overall target where the specific card's verified development ceiling makes it plausible.
+- Do not imply every 80+ recruit can reach 97+. If a +10 permanent overall development ceiling is confirmed for that card, an 80–86 base-rated player would have a corresponding 90–96 ceiling, while an 87+ base-rated player could have a 97+ pathway. Treat this arithmetic as conditional on the actual in-game rule and card type.
+- For every candidate, display starting rating, estimated/verified maximum, gap to 97, confidence in the estimate, key role attributes and a clear recommendation: recruit for 97+ pathway, recruit for role value and develop to verified maximum, or do not recruit.
+- Track recruitment and development separately: date acquired, initial rating and attributes, each coach use, actual recipient, permanent rating/attribute changes, resource cost, current rating and verified stopping point.
+- Never spend coins, gems or coaches, or make a game purchase, without explicit user approval. The user performs all in-game actions manually.
