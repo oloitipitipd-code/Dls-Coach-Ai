@@ -9,6 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
+import android.graphics.Bitmap
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
@@ -35,6 +40,9 @@ class LiveCaptureService : Service() {
     private var frameCount = 0
     private var lastSampleMs = 0L
     private var lastAverageBrightness = -1
+    private var lastOcrMs = 0L
+    @Volatile private var ocrInFlight = false
+    private var textRecognizer: TextRecognizer? = null
     private var lastNotificationUpdateMs = 0L
     private val sampleIntervalMs = 1_000L
 
@@ -94,6 +102,9 @@ class LiveCaptureService : Service() {
             frameCount = 0
             lastSampleMs = 0L
             lastAverageBrightness = -1
+            lastOcrMs = 0L
+            ocrInFlight = false
+            textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
             lastNotificationUpdateMs = 0L
             workerThread = HandlerThread("DlsCoachFrameSampler").also { it.start() }
             val handler = Handler(workerThread!!.looper)
@@ -109,6 +120,33 @@ class LiveCaptureService : Service() {
                                 lastAverageBrightness = measureAverageBrightness(image)
                                 frameCount++
                                 persistFrameDiagnostics(image.width, image.height)
+                                if (!ocrInFlight && now - lastOcrMs >= 3_000L) {
+                                    val bitmap = copyRgbaFrame(image)
+                                    if (bitmap != null) {
+                                        lastOcrMs = now
+                                        ocrInFlight = true
+                                        textRecognizer?.process(InputImage.fromBitmap(bitmap, 0))
+                                            ?.addOnSuccessListener { result ->
+                                                val recognised = result.text.take(1_200)
+                                                getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+                                                    .putString("capture_ocr_text", recognised)
+                                                    .putLong("capture_ocr_time", System.currentTimeMillis())
+                                                    .apply()
+                                            }
+                                            ?.addOnFailureListener {
+                                                getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+                                                    .putString("capture_ocr_status", "On-device text recognition failed for this sample")
+                                                    .apply()
+                                            }
+                                            ?.addOnCompleteListener {
+                                                bitmap.recycle()
+                                                ocrInFlight = false
+                                            } ?: run {
+                                                bitmap.recycle()
+                                                ocrInFlight = false
+                                            }
+                                    }
+                                }
                             }
                             if (now - lastNotificationUpdateMs >= 10_000L) {
                                 lastNotificationUpdateMs = now
@@ -181,6 +219,30 @@ class LiveCaptureService : Service() {
 
 
 
+    /**
+     * Copies one sampled RGBA frame into a bitmap for bundled on-device OCR.
+     * No frame is written to disk or transmitted. Pixel and row strides are respected.
+     */
+    private fun copyRgbaFrame(image: android.media.Image): Bitmap? = runCatching {
+        val plane = image.planes.firstOrNull() ?: return null
+        val buffer = plane.buffer.duplicate()
+        val width = image.width
+        val height = image.height
+        val pixels = IntArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val offset = y * plane.rowStride + x * plane.pixelStride
+                if (offset + 3 >= buffer.limit()) continue
+                val red = buffer.get(offset).toInt() and 0xff
+                val green = buffer.get(offset + 1).toInt() and 0xff
+                val blue = buffer.get(offset + 2).toInt() and 0xff
+                val alpha = buffer.get(offset + 3).toInt() and 0xff
+                pixels[y * width + x] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+            }
+        }
+        Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+    }.getOrNull()
+
     private fun measureAverageBrightness(image: android.media.Image): Int {
         val plane = image.planes.firstOrNull() ?: return -1
         return CaptureFrameMetrics.averageBrightness(
@@ -226,6 +288,8 @@ class LiveCaptureService : Service() {
         if (stopProjection) activeProjection?.stop()
         workerThread?.quitSafely()
         workerThread = null
+        textRecognizer?.close()
+        textRecognizer = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
