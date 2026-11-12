@@ -30,3 +30,10 @@ The web companion currently provides local squad entry, formation-fit heuristics
 5. Sign in from the web app Settings screen, then open AI Coach.
 
 The Edge Function requires a valid Supabase user JWT, enforces a database-backed limit of 10 AI requests per user per UTC day, and reads the Gemini key only on the server. AI provider quota and pricing depend on the account and selected model; verify current terms before use. The endpoint receives only the question plus the entered squad and match records supplied by the client. It does not capture DLS gameplay.
+
+
+## Independent offline coaching engine
+
+The AI Coach tab includes a built-in deterministic, rules-based analysis engine in `src/lib/localCoach.ts`. It runs entirely in the browser against the user's locally stored squad and match records. It does not call Gemini, ChatGPT, Supabase, or any network service. It reports squad depth, formation role coverage, and descriptive trends from the latest five logged results. It explicitly labels missing data and does not claim to predict wins or observe live gameplay.
+
+The optional cloud AI action remains separate. It requires Supabase sign-in, a deployed Edge Function, and a server-side Gemini key. The app's core offline coaching report does not require those services. This offline engine is a specialised decision-support rules engine, not a locally trained foundation language model.
