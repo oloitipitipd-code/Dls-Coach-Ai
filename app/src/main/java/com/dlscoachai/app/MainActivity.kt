@@ -115,7 +115,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureFrameWidth by remember { mutableIntStateOf(prefs.getInt("capture_frame_width", 0)) }
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
-    var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
     var liveScreenType by remember { mutableStateOf(prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN") }
     var liveScreenConfidence by remember { mutableStateOf(prefs.getString("live_screen_confidence", "LOW") ?: "LOW") }
     var liveCandidatesJson by remember { mutableStateOf(prefs.getString("live_squad_candidates", "[]") ?: "[]") }
@@ -130,7 +129,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 captureFrameWidth = prefs.getInt("capture_frame_width", 0)
                 captureFrameHeight = prefs.getInt("capture_frame_height", 0)
                 captureBrightness = prefs.getInt("capture_average_brightness", -1)
-                captureOcrText = prefs.getString("capture_ocr_text", "") ?: ""
                 liveScreenType = prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN"
                 liveScreenConfidence = prefs.getString("live_screen_confidence", "LOW") ?: "LOW"
                 liveCandidatesJson = prefs.getString("live_squad_candidates", "[]") ?: "[]"
@@ -374,7 +372,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     captureFrameWidth = captureFrameWidth,
                     captureFrameHeight = captureFrameHeight,
                     captureBrightness = captureBrightness,
-                    captureOcrText = captureOcrText,
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
@@ -512,7 +509,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, captureFrameWidth: Int, captureFrameHeight: Int, captureBrightness: Int, captureOcrText: String, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, captureFrameWidth: Int, captureFrameHeight: Int, captureBrightness: Int, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -545,11 +542,8 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
                 if (captureBrightness >= 0) {
                     Text("Average screen brightness: $captureBrightness / 255", style = MaterialTheme.typography.labelSmall)
                 }
-                Text("LATEST ON-SCREEN TEXT (ON-DEVICE OCR)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
-                Text(captureOcrText.ifBlank { "No readable text detected yet. Keep the DLS screen visible during an authorised capture session." }, style = MaterialTheme.typography.bodySmall)
-                if (captureOcrText.isNotBlank()) {
-                    Text("OCR is raw text recognition only. It does not yet identify players, ball movement, score events or tactical situations.", style = MaterialTheme.typography.bodySmall)
-                }
+                Text("ON-DEVICE OCR PRIVACY", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                Text("Raw screen text is processed locally for this sample and is not retained. Only possible player names and ratings are saved locally for your review; verify them before adding them to your squad.", style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (captureRequested) "Capture is active. Use the persistent Android notification or the button below to stop it."
                     else "Start a user-authorised screen-capture session. If Android offers app-window sharing, choose DLS 26.",
