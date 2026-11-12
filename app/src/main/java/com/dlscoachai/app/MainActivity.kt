@@ -389,7 +389,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
                 }, modifier = Modifier.padding(padding))
-                5 -> ManagerDashboardScreen(players, matches, formation, style, prefs, Modifier.padding(padding))
+                5 -> ManagerDashboardScreen(players, matches, formation, style, prefs, onFormationSelected = { formation = it }, modifier = Modifier.padding(padding))
                 6 -> DlsConnectionScreen(
                     captureRequested = captureRequested,
                     captureStatus = captureStatus,
