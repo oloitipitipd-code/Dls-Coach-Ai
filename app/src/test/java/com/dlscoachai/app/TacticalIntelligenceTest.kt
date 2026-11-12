@@ -20,7 +20,7 @@ class TacticalIntelligenceTest {
     @Test fun counterAttackEvidenceChangesTacticalScoring() {
         val baseline = recommendTactics(squad(), emptyList()).associateBy { it.formation }
         val observed = recommendTactics(squad(), listOf(Match("Loss",0,2,"[COUNTER] [COUNTER] Opponent countered twice"))).associateBy { it.formation }
-        assertTrue(observed.getValue("5-3-2").score > baseline.getValue("5-3-2").score)
+        assertTrue(observed.getValue("5-3-2").opponentFit > baseline.getValue("5-3-2").opponentFit)
     }
     @Test fun unknownPositionsAreNotCountedAsRoleCoverage() {
         val result = recommendTactics(listOf(Player("Unknown","UNK",99)), emptyList())
