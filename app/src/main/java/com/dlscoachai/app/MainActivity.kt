@@ -872,7 +872,7 @@ fun ScoutScreen(
 ) {
     val assessments = remember(squad, candidates) {
         candidates.map { assessRecruitment(it, squad) }
-            .sortedWith(compareBy<RecruitmentAssessment> { it.score }.thenByDescending { it.candidate.rating })
+            .sortedWith(compareByDescending<RecruitmentAssessment> { it.score }.thenByDescending { it.candidate.rating })
     }
     Page(modifier) {
         Text("Recruitment & Opponent Scout", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
