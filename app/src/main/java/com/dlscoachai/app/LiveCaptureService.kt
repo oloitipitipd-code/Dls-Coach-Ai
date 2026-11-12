@@ -135,8 +135,7 @@ class LiveCaptureService : Service() {
                                                     analysis.candidates.forEach { candidate ->
                                                         put(JSONObject()
                                                             .put("name", candidate.name)
-                                                            .put("rating", candidate.rating)
-                                                            .put("sourceLine", candidate.sourceLine))
+                                                            .put("rating", candidate.rating))
                                                     }
                                                 }
                                                 getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
