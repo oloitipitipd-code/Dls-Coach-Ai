@@ -28,6 +28,10 @@ fun ManagerDashboardScreen(
     prefs: SharedPreferences,
     modifier: Modifier = Modifier
 ) {
+    val aiAssessment = remember(players, matches) { chooseBestFormation(players) }
+    val aiFormation = aiAssessment?.formation ?: "Not enough squad data"
+    val aiLineup = aiAssessment?.lineup.orEmpty()
+    val aiBench = aiAssessment?.let { benchRecommendations(players, it.formation) }.orEmpty()
     var coins by remember { mutableStateOf(prefs.getString("manager_coins", "") ?: "") }
     var gems by remember { mutableStateOf(prefs.getString("manager_gems", "") ?: "") }
     var coaches by remember { mutableStateOf(prefs.getString("manager_coaches", "") ?: "") }
@@ -58,6 +62,28 @@ fun ManagerDashboardScreen(
                 Text("Purchases, spending coins or gems, signing or releasing players, irreversible changes and account/profile actions must never be performed without your explicit approval.", style = MaterialTheme.typography.bodySmall)
                 Text("Current boundary: this app has no authorised DLS control API. It cannot execute taps, gameplay, upgrades, purchases, reward claims or settings changes. You perform those actions inside DLS; the app records only outcomes you confirm.", style = MaterialTheme.typography.bodySmall)
                 Text("No hidden automation, game-memory access, traffic interception or bypass of game protections.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("AI-SELECTED TEAM", fontWeight = FontWeight.Bold)
+                Text("Formation selected from your registered squad: $aiFormation", fontWeight = FontWeight.SemiBold)
+                Text("Confidence: ${aiAssessment?.confidence ?: "INSUFFICIENT DATA"} · Filled positions: ${aiAssessment?.filledSlots ?: 0}/11")
+                if (players.isEmpty()) {
+                    Text("No squad is registered yet. Import all player screens to let the AI build your team.")
+                } else {
+                    aiLineup.forEach { slot ->
+                        Text("${slot.position}: ${slot.player?.let { "${it.name} · OVR ${it.rating}" } ?: "No suitable registered player"}")
+                    }
+                    HorizontalDivider()
+                    Text("BENCH / ROTATION", fontWeight = FontWeight.SemiBold)
+                    aiBench.forEach { player -> Text("• ${player.name} · ${player.position} · OVR ${player.rating}") }
+                    if (aiAssessment?.confidence == "LOW") {
+                        Text("Data quality is low. Confirm player positions and card attributes before relying on this XI.", color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
+                Text("This is an in-app team plan. It does not change the lineup inside DLS; game setup must currently be completed manually.", style = MaterialTheme.typography.bodySmall)
             }
         }
 
