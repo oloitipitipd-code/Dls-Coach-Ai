@@ -975,20 +975,28 @@ fun assessRecruitment(candidate: Player, squad: List<Player>): RecruitmentAssess
     val scoreGap = if (currentBest == null) candidateScore else candidateScore - incumbentScore
     val ratingGap = candidate.rating - (currentBest?.rating ?: 0)
 
-    if (currentBest == null || sameRole.size < depthTarget) {
-        val reason = if (currentBest == null) {
-            "No player is currently registered in this position. This fills a documented squad gap."
-        } else {
-            "Your squad has only ${sameRole.size} player(s) in this position; this adds depth. Compare attributes and cost before buying."
-        }
-        return result("SIGN — USEFUL DEPTH", reason, 60 + candidate.rating + scoreGap.coerceAtLeast(0))
+    if (currentBest == null) {
+        return result(
+            "SIGN — USEFUL DEPTH",
+            "No player is currently registered in this position. This fills a documented squad gap.",
+            60 + candidate.rating
+        )
     }
 
+    // A clear quality upgrade takes priority over the squad-depth suggestion.
     if (ratingGap >= 3 || (candidate.statsKnown && currentBest.statsKnown && scoreGap >= 6)) {
         return result(
             "SIGN — STRONG UPGRADE",
             "Compared with your best registered ${candidate.position}, this candidate improves overall rating by ${ratingGap} and role-fit score by ${scoreGap}. Verify the card and price in-game.",
             80 + ratingGap.coerceAtLeast(0) + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    if (sameRole.size < depthTarget) {
+        return result(
+            "SIGN — USEFUL DEPTH",
+            "Your squad has only ${sameRole.size} player(s) in this position; this adds depth. Compare attributes and cost before buying.",
+            60 + candidate.rating + scoreGap.coerceAtLeast(0)
         )
     }
 
