@@ -75,3 +75,8 @@ GitHub Actions is configured to test the Android project and build the web compa
 
 ## Approval Centre (web companion)
 The web companion now includes an approval ledger for proposed player purchases, player releases, premium-currency spending and account changes. Users can record a proposal and mark it approved or rejected for their own audit history. This is **not** connected to DLS and does not execute any game transaction.
+
+
+## Independent web coaching mode
+
+The React web companion now includes a deterministic offline coaching engine in `web/src/lib/localCoach.ts`. It analyses locally stored squad and match records without Gemini, ChatGPT, Supabase, an API key, or internet access. Optional cloud generative analysis remains separate and is not required for the offline report. The offline engine is transparent rules-based decision support, not a trained foundation language model. See [web setup and scope](web/README.md#independent-offline-coaching-engine).
