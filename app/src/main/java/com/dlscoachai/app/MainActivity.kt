@@ -1261,11 +1261,13 @@ fun formationSlots(formation: String): List<String> = when (formation) {
     "4-4-2" -> listOf("GK", "LB", "CB", "CB", "RB", "LM", "CM", "CM", "RM", "ST", "ST")
     "4-3-3" -> listOf("GK", "LB", "CB", "CB", "RB", "CM", "CDM", "CM", "LW", "ST", "RW")
     "4-1-2-1-2" -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "CM", "CAM", "ST", "ST")
-    else -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CDM", "LW", "CAM", "RW", "ST")
+    "4-2-3-1" -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "LW", "CAM", "RW", "ST")
+    else -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "LW", "CAM", "RW", "ST")
 }
 
 fun roleScore(p: Player, role: String): Int {
-    if (p.position == "UNK") return -1000
+    // Unknown positions use a provisional OVR fallback; GK remains position-locked.
+    if (p.position == "UNK") return if (role == "GK") -1000 else (p.rating - 8).coerceIn(0, 100)
     if (!p.statsKnown) {
         val positionFit = when {
             p.position == role -> 12
@@ -1315,9 +1317,41 @@ fun optimiseLineup(players: List<Player>, formation: String): List<LineupSlot> {
 
 fun benchRecommendations(players: List<Player>, formation: String): List<Player> {
     val starters = optimiseLineup(players, formation).mapNotNull { it.player }.toSet()
-    return players.filter { it !in starters && it.position != "UNK" }
+    return players.filter { it !in starters }
         .sortedWith(compareByDescending<Player> { it.rating }.thenBy { it.name })
         .take(7)
+}
+
+data class FormationAssessment(
+    val formation: String,
+    val lineup: List<LineupSlot>,
+    val filledSlots: Int,
+    val averageRoleScore: Double,
+    val confidence: String,
+    val totalScore: Double
+)
+
+fun assessFormation(players: List<Player>, formation: String): FormationAssessment {
+    val lineup = optimiseLineup(players, formation)
+    val selected = lineup.mapNotNull { it.player }
+    val filled = selected.size
+    val average = if (selected.isEmpty()) 0.0 else selected.map { roleScore(it, lineup.first { slot -> slot.player == it }.position) }.average()
+    val knownPositions = selected.count { it.position != "UNK" }
+    val knownAttributes = selected.count { it.statsKnown }
+    val confidence = when {
+        filled < 11 || knownPositions < 8 -> "LOW"
+        knownAttributes >= 8 -> "HIGH"
+        else -> "MEDIUM"
+    }
+    val total = filled * 100.0 + average * 0.35 + knownPositions * 2.0 + knownAttributes
+    return FormationAssessment(formation, lineup, filled, average, confidence, total)
+}
+
+fun chooseBestFormation(players: List<Player>): FormationAssessment? {
+    if (players.isEmpty()) return null
+    return listOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
+        .map { assessFormation(players, it) }
+        .maxWithOrNull(compareBy<FormationAssessment> { it.totalScore }.thenBy { it.formation })
 }
 
 fun tacticalAdvice(formation: String, style: String): List<String> {
