@@ -37,7 +37,8 @@ fun ManagerDashboardScreen(
     val adaptiveRecommendation = remember(players, opponentFormation, opponentStyle) {
         AdaptiveTacticalManager.recommend(players, opponentFormation, opponentStyle)
     }
-    val aiAssessment = adaptiveRecommendation?.assessment ?: remember(players) { chooseBestFormation(players) }
+    val fallbackAssessment = remember(players) { chooseBestFormation(players) }
+    val aiAssessment = adaptiveRecommendation?.assessment ?: fallbackAssessment
     val aiFormation = aiAssessment?.formation ?: "Not enough squad data"
     LaunchedEffect(aiAssessment?.formation) {
         val selected = aiAssessment?.formation
