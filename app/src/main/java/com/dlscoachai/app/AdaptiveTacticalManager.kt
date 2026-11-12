@@ -69,7 +69,7 @@ object AdaptiveTacticalManager {
             fit,
             explanation(formation, opponentFormation, opponentStyle),
             when {
-                assessment.confidence == "LOW" || opponentFormation !in supportedFormations -> "LOW"
+                assessment.confidence == "LOW" || opponentFormation !in supportedOpponentFormations -> "LOW"
                 opponentStyle == "Unknown" -> "MEDIUM"
                 else -> assessment.confidence
             }
