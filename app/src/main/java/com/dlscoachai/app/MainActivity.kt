@@ -698,6 +698,21 @@ fun CoachScreen(players: List<Player>, matches: List<Match>, formation: String, 
     Page(modifier) {
         Text("Performance Centre", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Evidence-led squad selection and tactical recommendations. Results depend on player data and how you execute in matches.")
+        val localInsights = remember(players, matches, style) { LocalTacticalCoach.analyse(players, matches, style) }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("BUILT-IN OFFLINE COACH", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Runs locally from your saved squad and match records. No ChatGPT account, API key or cloud request is used.")
+                localInsights.forEach { insight ->
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("${insight.title} · ${insight.confidence}", fontWeight = FontWeight.SemiBold)
+                        Text("Evidence: ${insight.evidence}", style = MaterialTheme.typography.bodySmall)
+                        Text(insight.recommendation)
+                    }
+                    HorizontalDivider()
+                }
+            }
+        }
         Card {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("TEAM PERFORMANCE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
