@@ -63,7 +63,7 @@ fun parseLiveSquadCandidates(raw: String): List<LiveSquadCandidate> = runCatchin
         val name = item.optString("name").trim()
         val rating = item.optInt("rating", -1)
         if (name.isBlank() || rating !in 1..100) null
-        else LiveSquadCandidate(name, rating, item.optString("sourceLine"))
+        else LiveSquadCandidate(name, rating)
     }
 }.getOrDefault(emptyList())
 
