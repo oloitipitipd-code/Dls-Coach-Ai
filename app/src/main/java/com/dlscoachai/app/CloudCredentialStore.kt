@@ -29,8 +29,8 @@ object CloudCredentialStore {
             val payload = Base64.decode(encoded, Base64.NO_WRAP)
             require(payload.size > 12) { "Encrypted token payload is invalid." }
             val buffer = ByteBuffer.wrap(payload)
-            val iv = ByteArray(12).also(buffer::get)
-            val ciphertext = ByteArray(buffer.remaining()).also(buffer::get)
+            val iv = ByteArray(12).also { buffer.get(it) }
+            val ciphertext = ByteArray(buffer.remaining()).also { buffer.get(it) }
             val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
             String(cipher.doFinal(ciphertext), Charsets.UTF_8)
