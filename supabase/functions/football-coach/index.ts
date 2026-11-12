@@ -28,7 +28,20 @@ Deno.serve(async (req: Request) => {
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const publishableKey = req.headers.get("apikey");
   if (!apiKey) return Response.json({ error: "AI provider is not configured on the server." }, { status: 503, headers: corsHeaders });
+  if (!supabaseUrl || !publishableKey) return Response.json({ error: "Secure usage quota is unavailable." }, { status: 503, headers: corsHeaders });
+
+  // Enforce a database-backed limit before calling the paid/free-tier provider.
+  const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/consume_ai_request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: publishableKey, Authorization: req.headers.get("Authorization")! },
+    body: "{}",
+  });
+  if (!quotaResponse.ok) return Response.json({ error: "Could not verify AI usage quota." }, { status: 503, headers: corsHeaders });
+  const quotaAllowed = await quotaResponse.json();
+  if (quotaAllowed !== true) return Response.json({ error: "Daily AI limit reached (10 requests per UTC day)." }, { status: 429, headers: corsHeaders });
 
   const safeContext = JSON.stringify({
     squad: Array.isArray(payload.squad) ? payload.squad.slice(0, 40) : [],
