@@ -29,4 +29,4 @@ The web companion currently provides local squad entry, formation-fit heuristics
 4. Deploy the function from the repository root with the Supabase CLI: `supabase functions deploy football-coach`.
 5. Sign in from the web app Settings screen, then open AI Coach.
 
-The Edge Function requires a valid Supabase user JWT and reads the Gemini key only on the server. AI provider quota and pricing depend on the account and selected model; verify current terms before use. The endpoint receives only the question plus the entered squad and match records supplied by the client. It does not capture DLS gameplay.
+The Edge Function requires a valid Supabase user JWT, enforces a database-backed limit of 10 AI requests per user per UTC day, and reads the Gemini key only on the server. AI provider quota and pricing depend on the account and selected model; verify current terms before use. The endpoint receives only the question plus the entered squad and match records supplied by the client. It does not capture DLS gameplay.
