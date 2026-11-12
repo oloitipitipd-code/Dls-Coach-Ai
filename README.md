@@ -72,3 +72,6 @@ A React + TypeScript web companion is available in `web/`. It provides local squ
 
 ## Current validation boundary
 GitHub Actions is configured to test the Android project and build the web companion on pull requests. A running or successful CI build is not evidence of installation or live-game validation on the target phone. The target-device acceptance checklist remains outstanding.
+
+## Approval Centre (web companion)
+The web companion now includes an approval ledger for proposed player purchases, player releases, premium-currency spending and account changes. Users can record a proposal and mark it approved or rejected for their own audit history. This is **not** connected to DLS and does not execute any game transaction.
