@@ -25,7 +25,7 @@ enum class ManagerOperation {
 }
 
 object ManagerPolicy {
-    const val MODE_LABEL = "FULL AUTONOMOUS"
+    const val MODE_LABEL = "LOCAL COACHING AUTONOMY"
     const val APPROVAL_LABEL = "APPROVAL REQUIRED"
 
     private val autonomousLocalOperations = setOf(
