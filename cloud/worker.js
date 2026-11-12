@@ -1,13 +1,12 @@
 /**
- * DLS Coach AI cloud gateway.
- *
- * Deploy as a Cloudflare Worker. Configure OPENAI_API_KEY as a Worker secret.
- * Never put the provider key in the Android APK.
+ * DLS Coach AI personal cloud gateway.
+ * Gemini API key stays in this server-side Worker, never in the Android APK.
+ * Default model: gemini-3.8-flash (select a model enabled on the account's free tier).
  */
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Content-Type": "application/json; charset=utf-8"
 };
 
@@ -19,8 +18,8 @@ export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method !== "POST") return json({ error: "POST required." }, 405);
-    if (!env.OPENAI_API_KEY) return json({ error: "Cloud AI provider is not configured." }, 503);
-    if (!env.APP_ACCESS_TOKEN) return json({ error: "Cloud AI access token is not configured." }, 503);
+    if (!env.GEMINI_API_KEY) return json({ error: "Free Gemini API key is not configured on the gateway." }, 503);
+    if (!env.APP_ACCESS_TOKEN) return json({ error: "Personal app access token is not configured." }, 503);
     if (request.headers.get("Authorization") !== `Bearer ${env.APP_ACCESS_TOKEN}`) {
       return json({ error: "Unauthorised. Check the app access token." }, 401);
     }
@@ -34,40 +33,47 @@ export default {
 
     const context = body.context && typeof body.context === "object" ? body.context : {};
     const system = [
-      "You are DLS Coach AI, an evidence-led Dream League Soccer 2026 coaching assistant.",
-      "Use the supplied squad and match records as the user's available data. Do not invent players, ratings, positions, match events, balances, or game state.",
-      "Independently recommend the best formation, starting XI, bench, tactical approach, squad development and transfer priorities from available evidence.",
-      "Clearly label uncertainty and explain trade-offs. Do not guarantee wins.",
-      "You are not connected to the user's DLS account and cannot read live inventory, alter lineups, purchase players, upgrade players, claim rewards, or control gameplay.",
-      "Never claim an in-game action was completed. Follow the game's published rules; do not advise cheats, bots, hacks, reverse engineering, traffic interception, or unauthorised automation.",
-      "If the roster is missing or incomplete, explain what is unknown and provide the best possible analysis from available data. Do not demand screenshots; use any existing records."
+      "You are DLS Coach AI, an independent, evidence-led Dream League Soccer 2026 team manager and coach.",
+      "Use supplied squad and match records as the only known user data. Never invent players, ratings, positions, match events, balances or game state.",
+      "Independently select the strongest formation, starting XI, bench and tactical approach from available evidence. Explain trade-offs and confidence.",
+      "Analyse recorded results, identify recurring weaknesses, and create practical training, development and transfer priorities.",
+      "Do not guarantee wins or claim certainty where player data is incomplete.",
+      "You are not connected to the user's DLS account. You cannot read live inventory, change the in-game lineup, purchase/sign/release players, upgrade players, claim rewards or control gameplay.",
+      "Never claim an in-game action was completed. Do not advise cheats, bots, hacks, reverse engineering, traffic interception or unauthorised automation.",
+      "If roster data is incomplete, say exactly what is missing and still give the best provisional analysis. Do not require screenshots; use records already available."
     ].join(" ");
 
-    const upstream = await fetch(env.AI_API_URL || "https://api.openai.com/v1/chat/completions", {
+    const contents = messages.slice(-20).map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: String(m.content || "").slice(0, 6000) }]
+    }));
+    if (contents[0]?.role === "model") contents.shift();
+    if (contents.length === 0) return json({ error: "At least one user message is required." }, 400);
+
+    const model = env.GEMINI_MODEL || "gemini-3.8-flash";
+    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+        "x-goog-api-key": env.GEMINI_API_KEY,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: env.AI_MODEL || "gpt-4o-mini",
-        temperature: 0.3,
-        messages: [
-          { role: "system", content: system + "\n\nCURRENT USER DATA (JSON):\n" + JSON.stringify(context).slice(0, 24000) },
-          ...messages.slice(-20).map(m => ({
-            role: m.role === "assistant" ? "assistant" : "user",
-            content: String(m.content || "").slice(0, 6000)
-          }))
-        ]
+        systemInstruction: {
+          parts: [{ text: system + "\n\nCURRENT USER DATA (JSON):\n" + JSON.stringify(context).slice(0, 24000) }]
+        },
+        contents,
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1800 }
       })
     });
 
     const result = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
-      return json({ error: result.error?.message || "AI provider request failed.", provider_status: upstream.status }, 502);
+      const message = result.error?.message || "Gemini request failed.";
+      return json({ error: message, provider_status: upstream.status }, upstream.status === 429 ? 429 : 502);
     }
-    const answer = result.choices?.[0]?.message?.content;
-    if (!answer) return json({ error: "The AI provider returned no answer." }, 502);
-    return json({ answer, model: result.model || env.AI_MODEL || "configured-model" });
+    const answer = (result.candidates?.[0]?.content?.parts || [])
+      .map(part => part.text || "").join("\n").trim();
+    if (!answer) return json({ error: "Gemini returned no text. The response may have been blocked or truncated." }, 502);
+    return json({ answer, model });
   }
 };
