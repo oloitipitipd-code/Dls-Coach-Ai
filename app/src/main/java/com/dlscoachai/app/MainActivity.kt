@@ -861,6 +861,130 @@ fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (
 }
 
 @Composable
+
+@Composable
+fun ScoutScreen(
+    squad: List<Player>,
+    candidates: List<Player>,
+    onAdd: () -> Unit,
+    onRemove: (Player) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val assessments = remember(squad, candidates) {
+        candidates.map { assessRecruitment(it, squad) }
+            .sortedWith(compareBy<RecruitmentAssessment> { it.score }.thenByDescending { it.candidate.rating })
+    }
+    Page(modifier) {
+        Text("Recruitment & Opponent Scout", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Add players you have legitimately observed in an opponent's squad or in an in-game recruitment market. This is a local shortlist, not automatic access to opponents' private data or the transfer market.")
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("RECRUITMENT RULES", fontWeight = FontWeight.Bold)
+                Text("Minimum eligibility: 80 OVR.")
+                Text("A high rating alone is not enough. Each candidate is compared with your registered squad in the same natural position.")
+                Text("No purchase is made. Verify availability and price in DLS, then make the decision yourself.")
+            }
+        }
+        Button(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("Add scouted player") }
+        Text("SHORTLIST · ${candidates.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (assessments.isEmpty()) {
+            Text("No candidates yet. Add a player using the exact name, position, rating and visible card attributes.")
+        } else {
+            assessments.forEach { assessment ->
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(assessment.candidate.name, fontWeight = FontWeight.Bold)
+                                Text("${assessment.candidate.position} · OVR ${assessment.candidate.rating}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text(assessment.decision, color = when {
+                                assessment.decision.startsWith("SIGN") -> MaterialTheme.colorScheme.primary
+                                assessment.decision.startsWith("DO NOT") -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.tertiary
+                            }, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                        Text(assessment.reason, style = MaterialTheme.typography.bodySmall)
+                        if (assessment.candidate.statsKnown) {
+                            Text("SPE ${assessment.candidate.spe} · ACC ${assessment.candidate.acc} · STA ${assessment.candidate.sta} · STR ${assessment.candidate.str} · PAS ${assessment.candidate.pas} · SHO ${assessment.candidate.sho} · TAC ${assessment.candidate.tac}", style = MaterialTheme.typography.labelSmall)
+                        } else {
+                            Text("Card attributes not verified — assessment uses rating and position only.", style = MaterialTheme.typography.labelSmall)
+                        }
+                        TextButton(onClick = { onRemove(assessment.candidate) }) { Text("Remove from shortlist") }
+                    }
+                }
+            }
+        }
+        Text("SCOUTING LIMITS", fontWeight = FontWeight.Bold)
+        Text("Opponent profiles are based only on details you manually enter or can legitimately see. The app does not scrape hidden accounts, inspect private game data, or automatically purchase players.")
+    }
+}
+
+fun assessRecruitment(candidate: Player, squad: List<Player>): RecruitmentAssessment {
+    fun result(decision: String, reason: String, score: Int = 0) =
+        RecruitmentAssessment(candidate, decision, reason, score)
+
+    if (squad.any { it.name.equals(candidate.name, ignoreCase = true) }) {
+        return result("ALREADY OWNED", "This player is already recorded in your squad.", 0)
+    }
+    if (candidate.rating !in 80..100) {
+        return result("DO NOT SIGN", "The candidate does not meet the 80+ overall eligibility threshold.", 0)
+    }
+    if (candidate.position == "UNK") {
+        return result("NEEDS DATA", "Confirm the player's natural position before judging squad fit.", 1)
+    }
+
+    val sameRole = squad.filter { it.position == candidate.position }
+    val depthTarget = when (candidate.position) {
+        "GK" -> 2
+        "CB" -> 3
+        "LB", "RB" -> 1
+        "CDM", "CM", "CAM", "LM", "RM" -> 4
+        "LW", "RW", "CF", "ST" -> 3
+        else -> 2
+    }
+    val currentBest = sameRole.maxByOrNull { player ->
+        if (player.statsKnown) roleScore(player, candidate.position) else player.rating
+    }
+    val candidateScore = if (candidate.statsKnown) roleScore(candidate, candidate.position) else candidate.rating
+    val incumbentScore = currentBest?.let {
+        if (it.statsKnown) roleScore(it, candidate.position) else it.rating
+    } ?: 0
+    val scoreGap = if (currentBest == null) candidateScore else candidateScore - incumbentScore
+    val ratingGap = candidate.rating - (currentBest?.rating ?: 0)
+
+    if (currentBest == null || sameRole.size < depthTarget) {
+        val reason = if (currentBest == null) {
+            "No player is currently registered in this position. This fills a documented squad gap."
+        } else {
+            "Your squad has only ${sameRole.size} player(s) in this position; this adds depth. Compare attributes and cost before buying."
+        }
+        return result("SIGN — USEFUL DEPTH", reason, 60 + candidate.rating + scoreGap.coerceAtLeast(0))
+    }
+
+    if (ratingGap >= 3 || (candidate.statsKnown && currentBest.statsKnown && scoreGap >= 6)) {
+        return result(
+            "SIGN — STRONG UPGRADE",
+            "Compared with your best registered ${candidate.position}, this candidate improves overall rating by ${ratingGap} and role-fit score by ${scoreGap}. Verify the card and price in-game.",
+            80 + ratingGap.coerceAtLeast(0) + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    if (ratingGap >= 0 || scoreGap >= 0) {
+        return result(
+            "CONSIDER — SITUATIONAL",
+            "The candidate is broadly comparable to your best ${candidate.position}; no clear upgrade is established. Sign only if a specific tactical need or affordable rotation benefit justifies it.",
+            40 + ratingGap + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    return result(
+        "DO NOT SIGN — SAVE RESOURCES",
+        "Your current ${candidate.position} option rates better on the available evidence. Address another squad weakness or save resources.",
+        10 + candidate.rating
+    )
+}
+
 fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
     var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
