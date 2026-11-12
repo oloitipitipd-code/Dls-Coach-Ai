@@ -11,6 +11,7 @@ Core squad, tactical, match, development and manager functions run locally. The 
 - **Tactical centre:** choose a supported formation and playing style; receive a role-fit starting XI and bench suggestions based only on entered positions and attributes.
 - **Match centre:** record wins/draws/losses, goals for/against, scorers, assists, notes and manually observed tactical events.
 - **Performance centre:** review recent scoring trends, five-match comparisons (when ten matches exist), manually tagged events, player contributions and dated player-development snapshots.
+- **Opponent-adaptive tactical manager:** compares all six supported formations against the opponent formation and observed playing style, scores squad/role fit plus transparent matchup heuristics, explains the recommendation and shows the leading alternatives. Opponent shape/style are currently user-entered; live opponent recognition is not implemented.
 - **Autonomous manager policy:** full autonomy for local, reversible squad assessments, lineup/tactical refreshes, development priorities and match summaries; purchases, spending, account operations and irreversible actions remain approval-gated and manual in DLS.
 - **Manager dashboard:** record user-confirmed resource snapshots; approve, dismiss or mark coaching recommendations as tested; review decision history.
 - **Game link:** find and launch an installed DLS app through Android's normal launcher; keep local notes about camera, graphics, controls and sound settings.
