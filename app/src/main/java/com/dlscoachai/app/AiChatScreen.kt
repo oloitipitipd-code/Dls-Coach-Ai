@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,6 +30,8 @@ fun AiChatScreen(
     modifier: Modifier = Modifier
 ) {
     var endpoint by remember { mutableStateOf(prefs.getString("cloud_ai_endpoint", "") ?: "") }
+    var accessToken by remember { mutableStateOf(prefs.getString("cloud_ai_access_token", "") ?: "") }
+    var dataConsent by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
@@ -46,9 +49,21 @@ fun AiChatScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
+        OutlinedTextField(
+            value = accessToken,
+            onValueChange = { accessToken = it; prefs.edit().putString("cloud_ai_access_token", it).apply() },
+            label = { Text("App access token") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Saved players: ${players.size}", style = MaterialTheme.typography.labelMedium)
             Text("Recorded matches: ${matches.size}", style = MaterialTheme.typography.labelMedium)
+        }
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Checkbox(checked = dataConsent, onCheckedChange = { dataConsent = it })
+            Text("I agree to send my chat and saved squad/match data to the configured AI provider.", style = MaterialTheme.typography.bodySmall)
         }
         HorizontalDivider()
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,7 +90,7 @@ fun AiChatScreen(
             maxLines = 4
         )
         Button(
-            enabled = !busy && draft.isNotBlank() && endpoint.startsWith("https://"),
+            enabled = !busy && draft.isNotBlank() && endpoint.startsWith("https://") && accessToken.isNotBlank() && dataConsent,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 val prompt = draft.trim()
@@ -86,7 +101,7 @@ fun AiChatScreen(
                 scope.launch {
                     try {
                         val answer = withContext(Dispatchers.IO) {
-                            requestCloudCoach(endpoint, messages.toList(), players, matches, formation, style)
+                            requestCloudCoach(endpoint, accessToken, messages.toList(), players, matches, formation, style)
                         }
                         messages.add(AiChatMessage("assistant", answer))
                     } catch (e: Exception) {
@@ -103,6 +118,7 @@ fun AiChatScreen(
 
 private fun requestCloudCoach(
     endpoint: String,
+    accessToken: String,
     messages: List<AiChatMessage>,
     players: List<Player>,
     matches: List<Match>,
@@ -144,6 +160,7 @@ private fun requestCloudCoach(
         readTimeout = 45000
         doOutput = true
         setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("Authorization", "Bearer ${accessToken}")
     }
     try {
         connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
