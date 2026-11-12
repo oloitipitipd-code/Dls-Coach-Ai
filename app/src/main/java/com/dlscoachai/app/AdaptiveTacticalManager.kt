@@ -17,6 +17,7 @@ data class AdaptiveFormationRecommendation(
 
 object AdaptiveTacticalManager {
     val supportedFormations = listOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
+    val supportedOpponentFormations = supportedFormations + "4-2-4"
     val opponentStyles = listOf(
         "Unknown",
         "High press",
@@ -41,7 +42,7 @@ object AdaptiveTacticalManager {
                 reason = explanation(formation, opponentFormation, opponentStyle),
                 confidence = when {
                     assessment.confidence == "LOW" -> "LOW"
-                    opponentFormation !in supportedFormations -> "LOW"
+                    opponentFormation !in supportedOpponentFormations -> "LOW"
                     opponentStyle == "Unknown" -> "MEDIUM"
                     else -> assessment.confidence
                 }
