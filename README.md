@@ -58,3 +58,17 @@ After ten matches, the Performance Centre also compares each player's recorded g
 
 ## Standalone DLS connection
 DLS Coach AI is designed to run independently on the phone. It does not require ChatGPT, an OpenAI account, an external AI assistant or cloud inference for its core features. The current connection to DLS is passive Android screen capture with local ML Kit OCR, using the Android permission prompt. It reads visible text only at this stage; it does not yet identify gameplay events or control the game. No official public DLS gameplay API/SDK has been verified. Any deeper integration would require documented authorisation from First Touch Games. The app will not use bots, input injection, game-memory access, reverse engineering, private endpoints or traffic interception.
+
+## DLS Ultimate AI web companion
+A React + TypeScript web companion is available in `web/`. It provides local squad registration, formation-fit estimates, match logging, and optional Supabase email authentication and synchronisation. See [web setup](web/README.md).
+
+## Shared backend and AI service scaffold
+- Supabase SQL migration: `supabase/migrations/0001_dls_core.sql` (owner-scoped RLS policies for squad, match records and approval queue).
+- Authenticated Edge Function: `supabase/functions/football-coach/index.ts`, configured to require a valid user JWT.
+- Gemini API credentials are read server-side from Supabase Edge Function secrets (`GEMINI_API_KEY`, optional `GEMINI_MODEL`); they are never placed in browser code.
+- The AI endpoint provides text coaching from user-entered squad/match context only. It is not live DLS perception or gameplay control.
+- Android remains local-first in this stage; shared Supabase synchronisation from Android is not yet integrated.
+- No Supabase project, Gemini secret, or deployment has been provisioned by this repository change. Those require the user's account and explicit credential setup.
+
+## Current validation boundary
+GitHub Actions is configured to test the Android project and build the web companion on pull requests. A running or successful CI build is not evidence of installation or live-game validation on the target phone. The target-device acceptance checklist remains outstanding.
