@@ -40,7 +40,26 @@ fun ManagerDashboardScreen(
 
     Page(modifier) {
         Text("MANAGEMENT DASHBOARD", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("One place to review evidence, approve coaching plans and track actions you complete in DLS.")
+        Text("Your local football operations centre. Routine coaching work is prepared automatically; consequential actions remain approval-gated.")
+
+
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("AUTONOMOUS MANAGER", fontWeight = FontWeight.Bold)
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(50)) {
+                        Text("ON", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                Text("Operating mode: FULL AUTONOMOUS for local, reversible coaching work.", fontWeight = FontWeight.SemiBold)
+                Text("The app can automatically refresh squad assessments, role-fit lineups, tactical plans, development priorities and summaries from information already saved on this device.", style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("APPROVAL GATE — ALWAYS REQUIRED", fontWeight = FontWeight.Bold)
+                Text("Purchases, spending coins or gems, signing or releasing players, irreversible changes and account/profile actions must never be performed without your explicit approval.", style = MaterialTheme.typography.bodySmall)
+                Text("Current boundary: this app has no authorised DLS control API. It cannot execute taps, gameplay, upgrades, purchases, reward claims or settings changes. You perform those actions inside DLS; the app records only outcomes you confirm.", style = MaterialTheme.typography.bodySmall)
+                Text("No hidden automation, game-memory access, traffic interception or bypass of game protections.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
