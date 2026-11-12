@@ -91,4 +91,37 @@ class LiveSquadIntelligenceTest {
         assertEquals("SETTINGS", result.screenType)
         assertTrue(result.candidates.isEmpty())
     }
+    @Test
+    fun accumulatesCandidatesAcrossPagesWithoutDuplicates() {
+        val firstPage = listOf(
+            LiveSquadCandidate("Kylian Mbappe", 96),
+            LiveSquadCandidate("Erling Haaland", 95)
+        )
+        val secondPage = listOf(
+            LiveSquadCandidate("Kylian Mbappe", 97),
+            LiveSquadCandidate("Virgil van Dijk", 94)
+        )
+
+        val merged = LiveSquadIntelligence.mergeCandidates(firstPage, secondPage)
+
+        assertEquals(3, merged.size)
+        assertEquals(97, merged.first { it.name == "Kylian Mbappe" }.rating)
+        assertTrue(merged.any { it.name == "Virgil van Dijk" })
+    }
+
+    @Test
+    fun candidateAccumulatorRejectsInvalidRecordsAndHonoursLimit() {
+        val existing = listOf(LiveSquadCandidate("Existing Player", 90))
+        val observed = listOf(
+            LiveSquadCandidate("Invalid Rating", 0),
+            LiveSquadCandidate("New Player", 91),
+            LiveSquadCandidate("Another Player", 92)
+        )
+
+        val merged = LiveSquadIntelligence.mergeCandidates(existing, observed, limit = 2)
+
+        assertEquals(2, merged.size)
+        assertTrue(merged.none { it.name == "Invalid Rating" })
+    }
+
 }
