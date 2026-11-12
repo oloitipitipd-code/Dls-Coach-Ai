@@ -24,6 +24,9 @@ export default {
       return json({ error: "Unauthorised. Check the app access token." }, 401);
     }
 
+    const declaredLength = Number(request.headers.get("Content-Length") || 0);
+    if (declaredLength > 64000) return json({ error: "Request is too large. Shorten the conversation or squad context." }, 413);
+
     let body;
     try { body = await request.json(); }
     catch { return json({ error: "Invalid JSON request." }, 400); }
@@ -43,12 +46,21 @@ export default {
       "If roster data is incomplete, say exactly what is missing and still give the best provisional analysis. Do not require screenshots; use records already available."
     ].join(" ");
 
-    const contents = messages.slice(-20).map(m => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: String(m.content || "").slice(0, 6000) }]
-    }));
+    const contents = [];
+    for (const message of messages.slice(-20)) {
+      if (!message || !["user", "assistant"].includes(message.role)) continue;
+      const text = String(message.content || "").trim().slice(0, 6000);
+      if (!text) continue;
+      const role = message.role === "assistant" ? "model" : "user";
+      const previous = contents[contents.length - 1];
+      // Gemini expects alternating user/model turns; merge consecutive messages after failed sends.
+      if (previous?.role === role) previous.parts[0].text += "\\n\\n" + text;
+      else contents.push({ role, parts: [{ text }] });
+    }
     if (contents[0]?.role === "model") contents.shift();
-    if (contents.length === 0) return json({ error: "At least one user message is required." }, 400);
+    if (contents.length === 0 || contents[contents.length - 1]?.role !== "user") {
+      return json({ error: "A non-empty user message is required at the end of the conversation." }, 400);
+    }
 
     const model = env.GEMINI_MODEL || "gemini-3.8-flash";
     const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
