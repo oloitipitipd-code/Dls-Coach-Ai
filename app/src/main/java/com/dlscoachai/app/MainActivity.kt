@@ -349,7 +349,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                         expanded = showMoreMenu,
                         onDismissRequest = { showMoreMenu = false }
                     ) {
-                        listOf("Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
+                        listOf("Coach", "Manager", "Game Link", "Connect", "AI Chat").forEachIndexed { index, label ->
                             DropdownMenuItem(
                                 text = { Text(label) },
                                 onClick = {
@@ -423,6 +423,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     },
                     modifier = Modifier.padding(padding)
                 )
+                8 -> AiChatScreen(prefs, players, matches, formation, style, Modifier.padding(padding))
             }
         }
 
