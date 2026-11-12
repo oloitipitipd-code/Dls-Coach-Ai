@@ -56,6 +56,7 @@ The debug APK is the installable test build. A green CI run verifies those autom
 ## Project documents
 
 - [Real-account integration and safety audit](docs/REAL_ACCOUNT_INTEGRATION_AUDIT.md)
+- [Target-device compatibility record and release checklist](docs/DEVICE_COMPATIBILITY.md)
 - [Autonomous manager requirements and quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md)
 
 ## Development status
