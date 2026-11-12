@@ -8,7 +8,7 @@ The Android app must never contain a provider API key. The Worker stores the key
 ## Deploy (Cloudflare Workers)
 1. Create a Cloudflare account and a Worker.
 2. Paste `worker.js` into the Worker editor and deploy it.
-3. In Worker Settings → Variables and Secrets, add the secret `OPENAI_API_KEY`.
+3. In Worker Settings → Variables and Secrets, add secrets `OPENAI_API_KEY` and `APP_ACCESS_TOKEN` (a long random token used only to protect your personal gateway).
 4. Optionally add `AI_MODEL` and `AI_API_URL` as variables. Defaults are `gpt-4o-mini` and the OpenAI chat-completions endpoint.
 5. Copy the deployed HTTPS Worker URL.
 6. In DLS Coach AI, open More → AI Chat and paste the Worker URL into Cloud AI endpoint.
