@@ -20,6 +20,10 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method !== "POST") return json({ error: "POST required." }, 405);
     if (!env.OPENAI_API_KEY) return json({ error: "Cloud AI provider is not configured." }, 503);
+    if (!env.APP_ACCESS_TOKEN) return json({ error: "Cloud AI access token is not configured." }, 503);
+    if (request.headers.get("Authorization") !== `Bearer ${env.APP_ACCESS_TOKEN}`) {
+      return json({ error: "Unauthorised. Check the app access token." }, 401);
+    }
 
     let body;
     try { body = await request.json(); }
