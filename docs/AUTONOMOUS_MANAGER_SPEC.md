@@ -515,10 +515,10 @@ Do not call a squad optimised or complete until:
 - Recommendations explain evidence and trade-offs; no fabricated ratings, stats, prices or guarantees.
 - The app's actual implementation is distinguished from planned features. A specification, mock-up or recommendation algorithm is not proof that live vision, automatic recruitment, player upgrades or other features are implemented.
 
-### Current product truth — development branch v1.6.0
+### Current product truth — release-candidate branch v1.7.0
 The Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, development priorities, match trend analysis, manually tagged tactical events, player contribution records, manual development snapshots, coaching report export/share and JSON backup/restore.
 
-The development branch adds user-authorised Android MediaProjection capture, sampled on-device ML Kit OCR, conservative screen-type classification and a text-line parser that proposes possible player names and overall ratings only when squad/player-profile context is detected. A review inbox requires explicit confirmation before candidates are added to the local squad. This is not validated visual player-card recognition: positions and individual attributes remain unknown/unverified, and OCR accuracy and device impact have not yet been validated on the target Infinix Smart 9.
+The release-candidate branch adds user-authorised Android MediaProjection capture, sampled on-device ML Kit OCR, conservative screen-type classification and a text-line parser that proposes possible player names and overall ratings only when squad/player-profile context is detected. A review inbox requires explicit confirmation before candidates are added to the local squad. This is not validated visual player-card recognition: positions and individual attributes remain unknown/unverified, and OCR accuracy and device impact have not yet been validated on the target Infinix Smart 9.
 
 The Manager tab provides manually confirmed resource snapshots, a local recommendation approval/dismissal/tested history and schema-version 3 backup support (schema versions 1 and 2 remain readable). Marking a recommendation tested records the user's confirmation only; it does not prove the result. The app does not access private account inventory or perform in-game actions.
 
