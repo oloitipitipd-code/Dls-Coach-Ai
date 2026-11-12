@@ -55,6 +55,7 @@ data class Match(val result: String, val scored: Int, val conceded: Int, val not
 data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
 data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList(), val scoutCandidates: List<Player> = emptyList())
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
+data class RecruitmentAssessment(val candidate: Player, val decision: String, val reason: String, val score: Int)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,6 +105,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
     var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
+    var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
     var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
 
     DisposableEffect(context) {
@@ -164,6 +166,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
     var showScoutDialog by remember { mutableStateOf(false) }
+    var showScoutDialog by remember { mutableStateOf(false) }
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var showMatchDialog by remember { mutableStateOf(false) }
     var showOcrDialog by remember { mutableStateOf(false) }
@@ -209,6 +212,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
     LaunchedEffect(progressEntries) { prefs.edit().putString("player_progress", saveProgress(progressEntries)).apply() }
+    LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
     LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
