@@ -30,7 +30,7 @@ fun AiChatScreen(
     modifier: Modifier = Modifier
 ) {
     var endpoint by remember { mutableStateOf(prefs.getString("cloud_ai_endpoint", "") ?: "") }
-    var accessToken by remember { mutableStateOf(prefs.getString("cloud_ai_access_token", "") ?: "") }
+    var accessToken by remember { mutableStateOf(CloudCredentialStore.read(prefs)) }
     var dataConsent by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -51,7 +51,7 @@ fun AiChatScreen(
         )
         OutlinedTextField(
             value = accessToken,
-            onValueChange = { accessToken = it; prefs.edit().putString("cloud_ai_access_token", it).apply() },
+            onValueChange = { accessToken = it; CloudCredentialStore.write(prefs, it) },
             label = { Text("App access token") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
