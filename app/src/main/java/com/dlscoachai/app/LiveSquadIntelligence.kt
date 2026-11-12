@@ -50,7 +50,7 @@ object LiveSquadIntelligence {
                 val rating = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
                 if (name.lowercase() in ignored || name.count { it.isLetter() } < 2) return@mapNotNull null
                 if (name.any { it.isDigit() }) return@mapNotNull null
-                LiveSquadCandidate(name, rating, line)
+                LiveSquadCandidate(name, rating)
             }.distinctBy { it.name.lowercase() }.take(30)
         } else emptyList()
 
