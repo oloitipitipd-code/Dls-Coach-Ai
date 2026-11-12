@@ -140,8 +140,6 @@ class LiveCaptureService : Service() {
                                                     }
                                                 }
                                                 getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
-                                                    .putString("capture_ocr_text", recognised)
-                                                    .putLong("capture_ocr_time", System.currentTimeMillis())
                                                     .putString("live_screen_type", analysis.screenType)
                                                     .putString("live_screen_confidence", analysis.confidence)
                                                     .putString("live_squad_candidates", candidatesJson.toString())
