@@ -29,7 +29,7 @@ class LocalTacticalCoachTest {
         )
         assertTrue(result.any { it.title == "Defensive balance" })
         assertTrue(result.any { it.title == "Repeated losses" })
-        assertTrue(result.any { it.title == "Chance creation" })
+        assertFalse(result.any { it.title == "Chance creation" })
     }
 
     @Test fun goalkeeperSnapshotRequiresConfirmedGoalkeeperAttributes() {
