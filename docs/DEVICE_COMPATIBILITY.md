@@ -45,4 +45,6 @@ Record pass/fail, app version, DLS version, test date and observed issue for eac
 
 **Compatibility status: NOT YET VERIFIED ON THE TARGET DEVICE.**
 
+The repository workflow is configured to run unit tests, Android lint and debug APK assembly on branch pushes and pull requests targeting `main`.
+
 A successful GitHub Actions build and JVM test run establish automated build/test results only. They do not prove successful installation, MediaProjection operation, OCR quality, battery/thermal safety or acceptable DLS responsiveness on this Infinix device. Do not describe the app as fully tested or production-ready until the acceptance tests above have been completed and results recorded.
