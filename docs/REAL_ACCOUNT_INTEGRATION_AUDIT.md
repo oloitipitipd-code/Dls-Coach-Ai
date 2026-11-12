@@ -1,7 +1,7 @@
 # Real-account integration audit — DLS Coach AI
 
 **Audit date:** 11 November 2026  
-**Repository baseline:** `main`, app version 1.6.0 (versionCode 7) (versionCode 6)  
+**Repository baseline:** `main` app version 1.5.0 (versionCode 6); development branch `feature/real-account-integration-audit` app version 1.7.0 (versionCode 8)  
 **Purpose:** establish what DLS Coach AI can technically access and what it may safely/permissibly automate before implementing deeper integration.
 
 ## Executive finding
@@ -23,7 +23,7 @@ Inspected files:
 - `app/build.gradle.kts`
 - `.github/workflows/android.yml`
 
-The current app is a native Kotlin/Jetpack Compose Android app (version 1.5.0). It already has:
+The `main` branch baseline is a native Kotlin/Jetpack Compose Android app (version 1.5.0). The development branch `feature/real-account-integration-audit` advances it to version 1.7.0 and adds the manager dashboard and conservative live OCR review workflow. The development branch already has:
 - Local squad/player records and manual player editing.
 - Formation and tactical planning.
 - Match result logging and basic trend analysis.
@@ -93,7 +93,7 @@ This audit therefore does not recommend AccessibilityService, UI tapping, overla
 4. First Touch Games Support, [How do I backup/restore/transfer my save data?](https://support.ftgames.com/hc/en-us/articles/214387685-How-do-I-backup-restore-transfer-my-save-data). FTG describes supported profile linking for save protection; this is not a third-party API for account control.
 
 
-### Prototype implementation update — 11 November 2026
+### Prototype implementation update — 11 November 2026 (development branch v1.7.0)
 
 The development branch now contains an initial `LiveSquadIntelligence` text-analysis prototype. It classifies a small set of visible screen labels and parses lines ending in a plausible overall rating only when the text indicates a squad or player-profile context. It persists candidate names/ratings separately and exposes a review inbox in Game Link. The user must explicitly confirm before candidates are appended to the local squad; imported positions are set to unknown and attributes are left unverified. Four JVM tests cover squad parsing, unknown-screen rejection, duplicate/attribute filtering and settings classification.
 
