@@ -41,4 +41,10 @@ class ManagerPolicyTest {
             assertFalse("$operation has no supported execution path in this app", ManagerPolicy.isExecutionSupported(operation))
         }
     }
+    @Test
+    fun autonomyLabelDoesNotClaimGameControl() {
+        assertTrue(ManagerPolicy.MODE_LABEL.contains("LOCAL"))
+        assertFalse(ManagerPolicy.MODE_LABEL.contains("FULL AUTONOMOUS"))
+    }
+
 }
