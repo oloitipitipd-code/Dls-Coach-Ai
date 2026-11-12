@@ -1,6 +1,6 @@
 # DLS Coach AI
 
-**Standalone Android companion for Dream League Soccer 2026.** Version **1.7.0** (version code 8) on the `fix/report-unknown-player-attributes` release-candidate branch.
+**Standalone Android companion for Dream League Soccer 2026.** Version **1.8.0** (version code 9) on the `fix/report-unknown-player-attributes` release-candidate branch.
 
 Core squad, tactical, match, development and manager functions run locally. The app does not require ChatGPT, an OpenAI account, a cloud AI service or a paid subscription for these features.
 
@@ -11,6 +11,7 @@ Core squad, tactical, match, development and manager functions run locally. The 
 - **Tactical centre:** choose a supported formation and playing style; receive a role-fit starting XI and bench suggestions based only on entered positions and attributes.
 - **Match centre:** record wins/draws/losses, goals for/against, scorers, assists, notes and manually observed tactical events.
 - **Performance centre:** review recent scoring trends, five-match comparisons (when ten matches exist), manually tagged events, player contributions and dated player-development snapshots.
+- **Autonomous manager policy:** full autonomy for local, reversible squad assessments, lineup/tactical refreshes, development priorities and match summaries; purchases, spending, account operations and irreversible actions remain approval-gated and manual in DLS.
 - **Manager dashboard:** record user-confirmed resource snapshots; approve, dismiss or mark coaching recommendations as tested; review decision history.
 - **Game link:** find and launch an installed DLS app through Android's normal launcher; keep local notes about camera, graphics, controls and sound settings.
 - **Authorised screen reading:** Android MediaProjection permission, foreground notification and stop control; sampled frames are processed locally with bundled ML Kit OCR.
@@ -51,7 +52,7 @@ The debug APK is the installable test build. A green CI run verifies those autom
 2. Extract the ZIP on Android.
 3. Open `app-debug.apk` and allow installation from Files if Android asks.
 4. If Android reports a signature conflict with an older CI build, export your app backup first. Different GitHub runners can generate different debug signing keys. Uninstall the old build only after you have secured your backup, then install and restore it.
-5. Confirm version 1.7.0 and test ordinary app functions before enabling screen capture.
+5. Confirm version 1.8.0 and test ordinary app functions before enabling screen capture.
 
 ## Project documents
 
@@ -61,4 +62,4 @@ The debug APK is the installable test build. A green CI run verifies those autom
 
 ## Development status
 
-The `fix/report-unknown-player-attributes` branch contains the 1.7.0 manager, live-squad OCR prototype and coaching-report data-quality fix. It is ahead of the repository's `main` branch; use the pull request to review and validate it before merging. Do not treat a successful CI build as a phone-tested release. Remaining real-device checks include install/upgrade, data persistence, backup restore, screenshot import, DLS launcher detection, capture permission/stop behaviour, OCR quality and resource use on the target phone.
+The `feat/autonomous-manager-permissions` branch builds on the 1.7.0 release candidate and adds the selected autonomous-manager permission policy as version 1.8.0. It is ahead of the repository's `main` branch; use the pull request to review and validate it before merging. Do not treat a successful CI build as a phone-tested release. Remaining real-device checks include install/upgrade, data persistence, backup restore, screenshot import, DLS launcher detection, capture permission/stop behaviour, OCR quality and resource use on the target phone.
