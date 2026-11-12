@@ -3,7 +3,7 @@ name: Build DLS Coach AI APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "feature/real-account-integration-audit", "fix/report-unknown-player-attributes" ]
+    branches: [ "main", "feature/real-account-integration-audit", "fix/report-unknown-player-attributes", "feat/autonomous-manager-permissions" ]
   pull_request:
     branches: [ "main" ]
 
