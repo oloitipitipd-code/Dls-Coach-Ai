@@ -58,7 +58,9 @@ object AdaptiveTacticalManager {
         players: List<Player>,
         opponentFormation: String,
         opponentStyle: String = "Unknown"
-    ): List<AdaptiveFormationRecommendation> = supportedFormations.mapNotNull { formation ->
+    ): List<AdaptiveFormationRecommendation> {
+        if (players.isEmpty()) return emptyList()
+        return supportedFormations.mapNotNull { formation ->
         val assessment = assessFormation(players, formation)
         val fit = tacticalFit(formation, opponentFormation, opponentStyle)
         AdaptiveFormationRecommendation(
@@ -75,6 +77,7 @@ object AdaptiveTacticalManager {
         compareByDescending<AdaptiveFormationRecommendation> { it.assessment.totalScore + it.tacticalFit * 4.0 }
             .thenBy { it.assessment.formation }
     )
+    }
 
     /** Public for transparent unit tests and an explainable candidate comparison. */
     fun tacticalFit(ourFormation: String, opponentFormation: String, opponentStyle: String): Int {
