@@ -102,6 +102,14 @@ class LiveCaptureService : Service() {
             val density = metrics.densityDpi
 
             frameCount = 0
+            // Each explicitly authorised capture is a fresh guided scan session.
+            // Never mix candidates from a previous session into this one.
+            getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+                .putString("live_squad_candidates", "[]")
+                .putString("live_screen_type", "UNKNOWN")
+                .putString("live_screen_confidence", "LOW")
+                .putLong("live_squad_candidates_time", 0L)
+                .apply()
             lastSampleMs = 0L
             lastAverageBrightness = -1
             lastOcrMs = 0L
@@ -131,14 +139,22 @@ class LiveCaptureService : Service() {
                                             ?.addOnSuccessListener { result ->
                                                 val recognised = result.text.take(1_200)
                                                 val analysis = LiveSquadIntelligence.analyse(recognised)
+                                                val preferences = getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE)
+                                                val previous = parseLiveSquadCandidates(
+                                                    preferences.getString("live_squad_candidates", "[]") ?: "[]"
+                                                )
+                                                val accumulated = LiveSquadIntelligence.mergeCandidates(
+                                                    previous,
+                                                    analysis.candidates
+                                                )
                                                 val candidatesJson = JSONArray().apply {
-                                                    analysis.candidates.forEach { candidate ->
+                                                    accumulated.forEach { candidate ->
                                                         put(JSONObject()
                                                             .put("name", candidate.name)
                                                             .put("rating", candidate.rating))
                                                     }
                                                 }
-                                                getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+                                                preferences.edit()
                                                     .putString("live_screen_type", analysis.screenType)
                                                     .putString("live_screen_confidence", analysis.confidence)
                                                     .putString("live_squad_candidates", candidatesJson.toString())
