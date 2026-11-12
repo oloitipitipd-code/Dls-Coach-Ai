@@ -140,7 +140,6 @@ fun DlsConnectionScreen(
                     Text("Possible player records from visible OCR. Check every name and rating against DLS before confirming.")
                     liveCandidates.forEach { candidate ->
                         Text("• ${candidate.name} — OVR ${candidate.rating}", fontWeight = FontWeight.SemiBold)
-                        Text("Read from: ${candidate.sourceLine}", style = MaterialTheme.typography.bodySmall)
                     }
                     Button(onClick = { onConfirmLiveCandidates(liveCandidates) }, modifier = Modifier.fillMaxWidth()) {
                         Text("Confirm and add to my local squad")
