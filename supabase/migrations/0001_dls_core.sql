@@ -38,3 +38,34 @@ drop policy if exists "Users manage their own matches" on public.match_records;
 create policy "Users manage their own matches" on public.match_records for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "Users manage their own approvals" on public.pending_approvals;
 create policy "Users manage their own approvals" on public.pending_approvals for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Server-enforced AI usage ceiling: at most 10 AI requests per user per UTC day.
+create table if not exists public.ai_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  usage_date date not null,
+  requests_used integer not null default 0 check (requests_used between 0 and 10),
+  primary key (user_id, usage_date)
+);
+alter table public.ai_usage enable row level security;
+create or replace function public.consume_ai_request()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare updated_count integer;
+begin
+  if auth.uid() is null then
+    return false;
+  end if;
+  insert into public.ai_usage(user_id, usage_date, requests_used)
+  values (auth.uid(), (now() at time zone 'utc')::date, 1)
+  on conflict (user_id, usage_date)
+  do update set requests_used = public.ai_usage.requests_used + 1
+    where public.ai_usage.requests_used < 10
+  returning requests_used into updated_count;
+  return updated_count is not null;
+end;
+$$;
+revoke all on function public.consume_ai_request() from public, anon;
+grant execute on function public.consume_ai_request() to authenticated;
