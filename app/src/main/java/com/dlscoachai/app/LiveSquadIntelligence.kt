@@ -19,6 +19,33 @@ data class LiveScreenAnalysis(
 )
 
 object LiveSquadIntelligence {
+    /**
+     * Accumulates candidates across a user-guided scan session.
+     * A later observation updates a candidate's rating without duplicating its name.
+     * The cap prevents unbounded preference growth from noisy OCR.
+     */
+    fun mergeCandidates(
+        existing: List<LiveSquadCandidate>,
+        observed: List<LiveSquadCandidate>,
+        limit: Int = 100
+    ): List<LiveSquadCandidate> {
+        val merged = LinkedHashMap<String, LiveSquadCandidate>()
+        existing.forEach { candidate ->
+            if (candidate.name.isNotBlank() && candidate.rating in 1..100) {
+                merged[candidate.name.trim().lowercase()] = candidate.copy(name = candidate.name.trim())
+            }
+        }
+        observed.forEach { candidate ->
+            if (candidate.name.isNotBlank() && candidate.rating in 1..100) {
+                val key = candidate.name.trim().lowercase()
+                if (key in merged || merged.size < limit) {
+                    merged[key] = candidate.copy(name = candidate.name.trim())
+                }
+            }
+        }
+        return merged.values.take(limit)
+    }
+
     private val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9][0-9]?)$")
     private val ignored = setOf(
         "overall rating", "rating", "speed", "acceleration", "stamina",
