@@ -1544,8 +1544,14 @@ fun nextCoachingActions(players: List<Player>, matches: List<Match>, formation: 
 }
 
 fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String {
-    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") {
-        "- ${it.name}: ${it.position}, OVR ${it.rating}; SPE ${it.spe}, ACC ${it.acc}, STA ${it.sta}, STR ${it.str}, CON ${it.con}, PAS ${it.pas}, SHO ${it.sho}, TAC ${it.tac}, GKR ${it.gkr}, GKH ${it.gkh}"
+    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") { player ->
+        val position = player.position.takeIf { it != "UNK" } ?: "position not entered"
+        val attributes = if (player.statsKnown) {
+            "; SPE ${player.spe}, ACC ${player.acc}, STA ${player.sta}, STR ${player.str}, CON ${player.con}, PAS ${player.pas}, SHO ${player.sho}, TAC ${player.tac}, GKR ${player.gkr}, GKH ${player.gkh}"
+        } else {
+            "; card attributes not entered"
+        }
+        "- ${player.name}: $position, OVR ${player.rating}$attributes"
     }
     val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { match ->
         val scorers = if (match.scorers.isEmpty()) "Scorers not recorded" else "Scorers: ${match.scorers.joinToString(", ")}"
