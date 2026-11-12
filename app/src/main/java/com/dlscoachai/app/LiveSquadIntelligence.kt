@@ -9,8 +9,7 @@ package com.dlscoachai.app
  */
 data class LiveSquadCandidate(
     val name: String,
-    val rating: Int,
-    val sourceLine: String
+    val rating: Int
 )
 
 data class LiveScreenAnalysis(
