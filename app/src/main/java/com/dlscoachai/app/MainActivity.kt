@@ -211,7 +211,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
     LaunchedEffect(progressEntries) { prefs.edit().putString("player_progress", saveProgress(progressEntries)).apply() }
     LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
-    LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
