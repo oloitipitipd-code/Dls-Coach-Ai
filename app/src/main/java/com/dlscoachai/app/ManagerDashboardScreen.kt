@@ -51,10 +51,10 @@ fun ManagerDashboardScreen(
                         Text("ON", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                Text("Operating mode: FULL AUTONOMOUS for local, reversible coaching work.", fontWeight = FontWeight.SemiBold)
+                Text("Operating mode: ${ManagerPolicy.MODE_LABEL} for local, reversible coaching work.", fontWeight = FontWeight.SemiBold)
                 Text("The app can automatically refresh squad assessments, role-fit lineups, tactical plans, development priorities and summaries from information already saved on this device.", style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
-                Text("APPROVAL GATE — ALWAYS REQUIRED", fontWeight = FontWeight.Bold)
+                Text("${ManagerPolicy.APPROVAL_LABEL} — ALWAYS REQUIRED", fontWeight = FontWeight.Bold)
                 Text("Purchases, spending coins or gems, signing or releasing players, irreversible changes and account/profile actions must never be performed without your explicit approval.", style = MaterialTheme.typography.bodySmall)
                 Text("Current boundary: this app has no authorised DLS control API. It cannot execute taps, gameplay, upgrades, purchases, reward claims or settings changes. You perform those actions inside DLS; the app records only outcomes you confirm.", style = MaterialTheme.typography.bodySmall)
                 Text("No hidden automation, game-memory access, traffic interception or bypass of game protections.", style = MaterialTheme.typography.bodySmall)
