@@ -337,7 +337,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     onUploadScreenshot = { squadImagePicker.launch(arrayOf("image/*")) },
                     modifier = Modifier.padding(padding)
                 )
-                2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
+                2 -> TacticsScreen(players, matches, formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, Modifier.padding(padding))
                 4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
@@ -604,12 +604,33 @@ fun SquadScreen(
 }
 
 @Composable
-fun TacticsScreen(formation: String, style: String, onFormation: (String) -> Unit, onStyle: (String) -> Unit, modifier: Modifier = Modifier) {
+fun TacticsScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onFormation: (String) -> Unit, onStyle: (String) -> Unit, modifier: Modifier = Modifier) {
     val formations = listOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
     val styles = listOf("Aggressive attack + compact defence", "Balanced possession", "Fast counter-attack", "High press")
     Page(modifier) {
         Text("Tactical Lab", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Choose a starting structure. These are planning notes, not automatic changes to the game.")
+        Text("Choose a starting structure. Recommendations use your entered squad and manually tagged match notes; they do not observe or control live gameplay.")
+        val recommendations = remember(players, matches) { recommendTactics(players, matches) }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("SQUAD-AWARE TACTICAL RECOMMENDATION", fontWeight = FontWeight.Bold)
+                if (recommendations.isEmpty()) {
+                    Text("Add verified players to calculate formation suitability.")
+                } else {
+                    val best = recommendations.first()
+                    Text("Top fit: ${best.formation}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Suitability score: ${best.score}/100 · Role coverage: ${best.filledSlots}/${best.totalSlots}")
+                    best.reasons.forEach { reason -> Text("• $reason", style = MaterialTheme.typography.bodySmall) }
+                    Divider()
+                    Text("OTHER OPTIONS", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                    recommendations.drop(1).take(2).forEach { option -> Text("${option.formation} — ${option.score}/100 · ${option.filledSlots}/${option.totalSlots} roles covered") }
+                    OutlinedButton(onClick = { onFormation(best.formation) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (formation == best.formation) "Recommended formation selected" else "Use ${best.formation} as planning formation")
+                    }
+                }
+                Text("Scores are transparent heuristics, not validated match-win probabilities. Confirm player positions and attributes before relying on them.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
         Text("Formation", fontWeight = FontWeight.Bold)
         formations.forEach { item ->
             OutlinedButton(onClick = { onFormation(item) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(
