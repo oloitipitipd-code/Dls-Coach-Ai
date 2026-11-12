@@ -569,3 +569,14 @@ The app must not claim to perform an action unless an authorised integration act
 - Record recommendations and user decisions locally. A user marking an action tested is a user statement, not independent verification.
 - Do not add Accessibility tap automation, input injection, game-memory inspection, reverse engineering, traffic interception, private endpoints or modified game clients.
 - No paid API or cloud service is enabled by this policy. Any future cloud processing requires separate cost, privacy and data-use disclosure and opt-in.
+
+
+## Opponent-adaptive formation manager — implementation increment
+
+- The local manager compares the six formations already supported by the squad assessment engine: 4-2-3-1, 4-3-3, 4-1-2-1-2, 3-5-2, 5-3-2 and 4-4-2.
+- It combines the existing role-fit/lineup assessment with explicit, inspectable tactical heuristics for the opponent's observed formation and playing style. It returns a recommendation, confidence label, explanation and ranked alternatives.
+- Opponent profiles currently include the supported formations plus 4-2-4 as an opponent-only shape, and observed tendencies: high press, fast counter-attack, wide play, central build-up and deep defensive block.
+- The user supplies the opponent profile in the Manager dashboard. Automatic opponent formation/style recognition from live match video is not implemented; do not describe this increment as autonomous visual recognition.
+- The matchup weights are initial coaching heuristics, not validated DLS engine mechanics, official counters or win probabilities. They require testing against logged matches and should be revised when evidence contradicts them.
+- The recommendation does not change DLS formation or player selection. The user applies the recommended setup in the official game. No taps, input injection, game memory access or account operations are introduced.
+- Unit tests cover non-empty/empty squads, opponent-shape influence, opponent-style influence and low confidence when opponent shape is unknown.
