@@ -106,7 +106,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
     var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
     var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
-    var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -165,7 +164,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
-    var showScoutDialog by remember { mutableStateOf(false) }
     var showScoutDialog by remember { mutableStateOf(false) }
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var showMatchDialog by remember { mutableStateOf(false) }
@@ -888,8 +886,6 @@ fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (
 }
 
 @Composable
-
-@Composable
 fun ScoutScreen(
     squad: List<Player>,
     candidates: List<Player>,
@@ -1012,6 +1008,7 @@ fun assessRecruitment(candidate: Player, squad: List<Player>): RecruitmentAssess
     )
 }
 
+@Composable
 fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
     var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
