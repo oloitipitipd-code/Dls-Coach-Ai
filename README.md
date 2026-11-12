@@ -1,60 +1,71 @@
-# Dls-Coach-Ai
-Standalone Android companion for Dream League Soccer 2026. Core features run inside this app and do not require ChatGPT, an OpenAI account, or cloud AI.
+# DLS Coach AI
 
-## Build
-A debug APK is built by the GitHub Actions workflow in `.github/workflows/android.yml`. Current app version: 1.5.0 (version code 6).
+**Standalone Android companion for Dream League Soccer 2026.** Version **1.8.0** (version code 9) on the `feat/autonomous-manager-permissions` development branch.
 
-## Current capabilities
-- Local squad records and editable player profiles
-- Formation and tactical planning
-- Match result logging and basic trend analytics
-- Role-fit starting XI estimates using confirmed positions and attributes only
-- Backup export and restore
-- Share squad screenshots to the app; on-device OCR creates reviewable player drafts before the user confirms any database changes
-- User-authorised Android screen capture with local on-device ML Kit text recognition, visible foreground notification and stop control
+Core squad, tactical, match, development and manager functions run locally. The app does not require ChatGPT, an OpenAI account, a cloud AI service or a paid subscription for these features.
 
-## Live capture status and limitations
-The live companion requests Android MediaProjection permission, creates a foreground capture service, scales frames to a maximum long edge of 960 pixels, and samples them locally. Bundled ML Kit OCR reads visible text on-device at a limited sampling rate; raw frames are not saved or uploaded and audio is not captured. OCR is not yet gameplay-event recognition and does not generate validated tactical alerts or control DLS. Capture can be stopped from the app or its persistent Android notification. Real-device behaviour, OCR accuracy, frame rate, heat, battery use and game responsiveness still require testing on the target phone.
+## What is included
 
-## DLS game link and settings profile (version 1.5.0)
-- The Game Link tab searches Android-visible launcher activities for an installed app labelled Dream League Soccer and opens the matching game through its normal launcher activity.
-- It provides user-authorised MediaProjection screen capture controls and a local OCR status explanation.
-- It stores the user's own camera, graphics/performance, controls, sound and other settings notes locally.
-- The settings profile is a record and guide only. It does not silently change DLS settings, control gameplay or inspect private game data. The current OCR does not yet reliably recognise gameplay events or settings.
+- **Squad manager:** add, edit and remove players; record position, OVR and the ten visible card attributes; inspect squad depth and data completeness.
+- **Screenshot import:** share one or more DLS screenshots to the app or choose an image; on-device ML Kit OCR proposes possible name/rating records for manual review. Nothing is added until confirmation.
+- **Tactical centre:** choose a supported formation and playing style; receive a role-fit starting XI and bench suggestions based only on entered positions and attributes.
+- **Match centre:** record wins/draws/losses, goals for/against, scorers, assists, notes and manually observed tactical events.
+- **Performance centre:** review recent scoring trends, five-match comparisons (when ten matches exist), manually tagged events, player contributions and dated player-development snapshots.
+- **Opponent-adaptive tactical manager:** compares all six supported formations against the opponent formation and observed playing style, scores squad/role fit plus transparent matchup heuristics, explains the recommendation and shows the leading alternatives. Opponent shape/style are currently user-entered; live opponent recognition is not implemented.
+- **Autonomous manager policy:** full autonomy for local, reversible squad assessments, lineup/tactical refreshes, development priorities and match summaries; purchases, spending, account operations and irreversible actions remain approval-gated and manual in DLS.
+- **Manager dashboard:** record user-confirmed resource snapshots; approve, dismiss or mark coaching recommendations as tested; review decision history.
+- **Game link:** find and launch an installed DLS app through Android's normal launcher; keep local notes about camera, graphics, controls and sound settings.
+- **Authorised screen reading:** Android MediaProjection permission, foreground notification and stop control; sampled frames are processed locally with bundled ML Kit OCR. When you open DLS squad/player screens, the app can identify possible visible player-name/rating text; it does not yet extract a complete roster or all card attributes reliably.
+- **Backup and recovery:** export and restore JSON backups. Schema versions 1–3 are accepted; version 3 includes player development and manager data.
+- **Online AI chat:** an optional cloud-connected coach can discuss saved squad and match records, compare formations, choose an XI and explain decisions. The documented setup uses a provider free tier where available, but quotas and terms can change; no paid fallback is configured. No provider key is embedded in the APK.
 
-## Optional integrations (version 1.4.0)
-- **GitHub:** the Connect screen can query the latest public GitHub Actions workflow status and open the repository/build page. This is read-only, user-triggered and does not request a GitHub login or token.
-- **ChatGPT:** the user can manually share a generated coaching report through Android's share menu and select ChatGPT if installed. The app does not require ChatGPT and does not send reports automatically.
-- Both integrations are optional. Core squad, tactics, match logging and local analysis remain on-device. The GitHub status check requires an internet connection; manual report sharing requires the user to choose a receiving app.
+## Accuracy and safety boundaries
 
-## Important limitations
-OCR is fallible. Extracted player names and ratings are drafts and require user review; positions and attributes are not inferred when they are not clearly visible. Full match-video event analysis is not yet implemented. The app does not modify DLS, automate gameplay, spend in-game currency, or guarantee wins.
+This is a companion app, not an official First Touch Games product.
 
-## Autonomous manager roadmap
-The requirements, privacy rules, workflow, core screens, and staged delivery plan are documented in [AUTONOMOUS_MANAGER_SPEC.md](docs/AUTONOMOUS_MANAGER_SPEC.md).
+- No verified public DLS gameplay API or SDK has been established for this project. The app does not directly authenticate to your DLS account or read private account inventory. Internet access connects the app to its AI service, not to private DLS account data.
+- The account checkbox is only your local confirmation; it is not DLS authentication. Keep Google/Apple sign-in and profile transfer inside the official game.
+- The app does not automate taps, gameplay, purchases, upgrades, reward claims or settings changes. It does not inspect game memory/files, intercept traffic, use private endpoints or modify the game.
+- The online AI uses records already saved in the app. It cannot independently discover the full DLS roster, live coins/gems, transfers or match state. No screenshot upload is required for AI chat. The existing user-authorised live screen reader can inspect visible text while you navigate DLS screens, but it currently produces only tentative name/rating candidates and cannot guarantee complete player-card extraction. A complete automatic roster sync requires an authorised integration from First Touch Games.
+- Live OCR is text recognition, not validated player-card vision, ball tracking, score/event detection or tactical interpretation. It does not yet analyse match video.
+- Resource balances and development snapshots are manually entered. Marking a recommendation as tested records your statement; it does not verify an in-game outcome.
+- Coaching scores are estimates, not official DLS formulas. Recommendations cannot guarantee wins or permanent player-rating gains.
 
-The intended design is English-only, evidence-led, and local-first. Any future cloud AI or paid service must be opt-in and disclose costs and data handling.
+## Privacy and performance
 
-## Squad-building rules
-- Recruitment threshold: 80+ overall, **only when the player materially benefits the current squad**.
-- Compare candidates against existing players by position, role-relevant attributes, squad weakness, depth and cost. Avoid unnecessary signings and save resources when there is no worthwhile upgrade.
-- Preferred long-term development target: 97+ permanent overall **where the specific player's actual DLS 26 development limit makes it achievable**. Never promise a rating or confuse temporary Form Boosts with permanent development.
-- Full recruitment, development, tactical and quality-assurance requirements are in [the final quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md#final-quality-squad-standard--recruitment-development-and-team-balance).
-## Engineering checks
-The CI workflow runs JVM unit tests for the capture-frame brightness helper before assembling the debug APK. These tests validate pixel-stride handling, row padding, invalid dimensions and short buffers; they do not replace real-device capture, battery, heat or game-performance testing.
+Screen reading starts only after the Android system permission prompt. Frames are sampled and processed on-device; raw frames are not saved or uploaded, and audio is not captured. A persistent notification exposes the active session and a stop action. OCR text and user-entered records are stored locally in app preferences. Exported backups are files you control.
 
-## Player development and team trends
-The Performance Centre supports dated, manually verified player-card snapshots (overall rating plus one selected attribute), comparison of first and latest records, and inclusion of development history in backups and coaching reports. Team analysis compares the latest five logged matches with the previous five when at least ten results are available. These are descriptive trends from user-entered records, not causal proof or live game telemetry.
+The target device for practical testing is an entry-level Android phone. Capture frame rate, OCR accuracy, heat, battery use and game responsiveness must still be checked on the actual phone. Stop capture if the device becomes hot or DLS performance degrades.
 
-## Tactical event pattern tracking
-When recording a match, users can optionally tag observed events such as opponent counter-attacks, high-press situations, midfield losses, missed chances, goalkeeper errors, defensive errors and set pieces. The Performance Centre counts only these explicit manual tags and highlights the most frequent categories. This is a review aid, not automatic event recognition; inspect the relevant match footage and notes before changing tactics.
+## Build and validation
 
-The tactical pattern view focuses on the latest five logged matches and, once ten matches are available, compares them with the preceding five. It reports changes in manually tagged event counts only; it does not infer that a tag caused a win or loss. Fewer than ten matches are never presented as a complete five-versus-five comparison.
+GitHub Actions runs:
+1. JVM unit tests
+2. Android `lintDebug`
+3. Debug APK assembly
+4. Debug APK artifact upload
 
-## Player match contributions
-Match logging optionally accepts goal scorers and assists using exact squad names, comma-separated. Repeat a name when a player scores or assists more than once in a match. The Performance Centre aggregates only these manually entered contributions; players without recorded contributions are not assumed to have played or performed poorly. Older match records remain compatible and simply have no scorer/assist data.
+The debug APK is the installable test build. A green CI run verifies those automated checks only; it does not prove real-device behaviour, DLS compatibility or account integration.
 
-After ten matches, the Performance Centre also compares each player's recorded goals and assists in the latest five matches against the previous five. This is a limited contribution trend, not a complete performance rating: appearances, minutes, defensive actions and chance creation are not inferred.
+## Install
 
-## Standalone DLS connection
-DLS Coach AI is designed to run independently on the phone. It does not require ChatGPT, an OpenAI account, an external AI assistant or cloud inference for its core features. The current connection to DLS is passive Android screen capture with local ML Kit OCR, using the Android permission prompt. It reads visible text only at this stage; it does not yet identify gameplay events or control the game. No official public DLS gameplay API/SDK has been verified. Any deeper integration would require documented authorisation from First Touch Games. The app will not use bots, input injection, game-memory access, reverse engineering, private endpoints or traffic interception.
+1. Download the `DLS-Coach-AI-debug` artifact from the successful workflow run.
+2. Extract the ZIP on Android.
+3. Open `app-debug.apk` and allow installation from Files if Android asks.
+4. If Android reports a signature conflict with an older CI build, export your app backup first. Different GitHub runners can generate different debug signing keys. Uninstall the old build only after you have secured your backup, then install and restore it.
+5. Confirm version 1.8.0 and test ordinary app functions before enabling screen capture.
+
+## Project documents
+
+- [Real-account integration and safety audit](docs/REAL_ACCOUNT_INTEGRATION_AUDIT.md)
+- [Target-device compatibility record and release checklist](docs/DEVICE_COMPATIBILITY.md)
+- [Autonomous manager requirements and quality-squad standard](docs/AUTONOMOUS_MANAGER_SPEC.md)
+
+## Development status
+
+The `feat/autonomous-manager-permissions` branch builds on the 1.7.0 release candidate and adds the selected autonomous-manager permission policy as version 1.8.0. It is ahead of the repository's `main` branch; use the pull request to review and validate it before merging. Do not treat a successful CI build as a phone-tested release. Remaining real-device checks include install/upgrade, data persistence, backup restore, screenshot import, DLS launcher detection, capture permission/stop behaviour, OCR quality and resource use on the target phone.
+
+
+## Online AI setup
+
+The optional cloud AI gateway is in `cloud/`. Follow [cloud/README.md](cloud/README.md) to deploy it and configure a server-side Gemini API key on the provider's free tier where available. Do not attach billing if you want to keep the setup free. The provider receives chat text and saved squad/match context when you send a message.

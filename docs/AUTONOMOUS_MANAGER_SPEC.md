@@ -515,8 +515,14 @@ Do not call a squad optimised or complete until:
 - Recommendations explain evidence and trade-offs; no fabricated ratings, stats, prices or guarantees.
 - The app's actual implementation is distinguished from planned features. A specification, mock-up or recommendation algorithm is not proof that live vision, automatic recruitment, player upgrades or other features are implemented.
 
-### Current product truth
-The current Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, basic development priorities, on-device OCR text extraction for review, and sharing match evidence/report text. OCR does not yet create player records automatically. Match footage is shared for external review; the app does not perform in-app video analysis. Live screen capture, live computer vision, private tactical overlay, voice coaching, automated structured squad extraction, persistent coach-outcome development ledger and recruitment-market integration are not implemented in the inspected app version. Do not describe any of those as working until code is added and a successful build plus device testing confirms it.
+### Current product truth — release-candidate branch v1.7.0
+The Android app supports manual player entry, local squad/match records, formation selection, heuristic role-fit XI estimates, development priorities, match trend analysis, manually tagged tactical events, player contribution records, manual development snapshots, coaching report export/share and JSON backup/restore.
+
+The release-candidate branch adds user-authorised Android MediaProjection capture, sampled on-device ML Kit OCR, conservative screen-type classification and a text-line parser that proposes possible player names and overall ratings only when squad/player-profile context is detected. A review inbox requires explicit confirmation before candidates are added to the local squad. This is not validated visual player-card recognition: positions and individual attributes remain unknown/unverified, and OCR accuracy and device impact have not yet been validated on the target Infinix Smart 9.
+
+The Manager tab provides manually confirmed resource snapshots, a local recommendation approval/dismissal/tested history and schema-version 3 backup support (schema versions 1 and 2 remain readable). Marking a recommendation tested records the user's confirmation only; it does not prove the result. The app does not access private account inventory or perform in-game actions.
+
+Match footage is not analysed in-app. No ball/player tracking, live tactical alerts, tactical overlay, voice coaching, automatic resource/gift detection, automatic player development outcome detection, recruitment-market integration or direct DLS account authentication is implemented. Device-level capture stability, thermal impact, battery use, game responsiveness and real-screen OCR accuracy still require testing on the target phone. A successful CI build is not a substitute for that device testing.
 
 
 ## Optional external integrations — version 1.4.0
@@ -534,3 +540,43 @@ External services are optional helpers, never dependencies for core coaching:
 The Game Link screen uses Android's launcher-intent visibility to look for an installed launcher activity whose visible app label contains "Dream League Soccer". If found, it launches that activity using a normal Android intent. This is app discovery and launch, not a privileged game integration. The screen reuses the existing user-authorised MediaProjection controls and lets the user record their own camera, graphics/performance, controls, sound and other settings notes in local preferences.
 
 The settings profile does not write into DLS or apply values automatically. DLS internal settings, account state, live game state and player data remain outside the app's direct control unless First Touch Games supplies a documented supported interface. OCR remains limited to visible text and must not be represented as reliable gameplay understanding. Keep all game-control, input-injection, private-file and reverse-engineering restrictions in force.
+
+
+## User-selected autonomous manager permission profile
+
+The user's selected mode is **Full autonomous management**, with explicit approval required for purchases and irreversible actions. Implement this as a local-first coaching-agent policy, not as permission to bypass game controls or platform safeguards.
+
+### Allowed autonomous work inside DLS Coach AI
+- Recalculate role-fit starting XI and substitute suggestions whenever confirmed squad data, formation or tactical preferences change.
+- Refresh tactical recommendations and squad-balance warnings from confirmed local records.
+- Prepare player-development priorities from recorded attributes and dated progress snapshots.
+- Summarise recorded match results, player contributions and manually tagged events.
+- Maintain local decision history and clearly label recommendations as estimates.
+- Launch DLS through its ordinary Android launcher intent when the user requests it.
+- Process screen text only after the Android MediaProjection permission prompt; keep processing local and expose a persistent stop control.
+
+### Mandatory approval and manual-only actions
+- Any purchase, transfer, player signing/release, upgrade, reward claim or spending of coins/gems.
+- Any irreversible change, account/profile operation, credential use or change that could affect the user's DLS account.
+- Any action that changes DLS settings or sends input to the game.
+
+The app must not claim to perform an action unless an authorised integration actually exists and its success is verified. At this release, no official public DLS gameplay/account API or authorised control interface has been established. Therefore the app remains observational and advisory: the user performs in-game actions manually, then may record the verified outcome.
+
+### Permission UX and audit
+- Show **Autonomous local management: ON** in the Manager dashboard.
+- Show a permanent **Approval required** policy for purchases, spending and irreversible/account actions.
+- Never infer live coin/gem balances, inventory, player upgrades or reward availability from OCR unless the value is clearly visible; treat OCR as an unconfirmed draft.
+- Record recommendations and user decisions locally. A user marking an action tested is a user statement, not independent verification.
+- Do not add Accessibility tap automation, input injection, game-memory inspection, reverse engineering, traffic interception, private endpoints or modified game clients.
+- No paid API or cloud service is enabled by this policy. Any future cloud processing requires separate cost, privacy and data-use disclosure and opt-in.
+
+
+## Opponent-adaptive formation manager — implementation increment
+
+- The local manager compares the six formations already supported by the squad assessment engine: 4-2-3-1, 4-3-3, 4-1-2-1-2, 3-5-2, 5-3-2 and 4-4-2.
+- It combines the existing role-fit/lineup assessment with explicit, inspectable tactical heuristics for the opponent's observed formation and playing style. It returns a recommendation, confidence label, explanation and ranked alternatives.
+- Opponent profiles currently include the supported formations plus 4-2-4 as an opponent-only shape, and observed tendencies: high press, fast counter-attack, wide play, central build-up and deep defensive block.
+- The user supplies the opponent profile in the Manager dashboard. Automatic opponent formation/style recognition from live match video is not implemented; do not describe this increment as autonomous visual recognition.
+- The matchup weights are initial coaching heuristics, not validated DLS engine mechanics, official counters or win probabilities. They require testing against logged matches and should be revised when evidence contradicts them.
+- The recommendation does not change DLS formation or player selection. The user applies the recommended setup in the official game. No taps, input injection, game memory access or account operations are introduced.
+- Unit tests cover non-empty/empty squads, opponent-shape influence, opponent-style influence and low confidence when opponent shape is unknown.

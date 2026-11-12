@@ -1,0 +1,127 @@
+package com.dlscoachai.app
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class LiveSquadIntelligenceTest {
+    @Test
+    fun parsesPlayerNamesAndRatingsOnlyOnSquadScreen() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            MY SQUAD
+            Kylian Mbappe 96
+            Erling Haaland 95
+            Speed 90
+            """.trimIndent()
+        )
+
+        assertEquals("SQUAD", result.screenType)
+        assertEquals(2, result.candidates.size)
+        assertEquals("Kylian Mbappe", result.candidates[0].name)
+        assertEquals(96, result.candidates[0].rating)
+        assertEquals(95, result.candidates[1].rating)
+        assertEquals("MEDIUM", result.confidence)
+    }
+
+    @Test
+    fun doesNotTreatArbitraryNumbersAsPlayerRatingsOnUnknownScreen() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            WELCOME BACK
+            Kylian Mbappe 96
+            """.trimIndent()
+        )
+
+        assertEquals("UNKNOWN", result.screenType)
+        assertTrue(result.candidates.isEmpty())
+    }
+
+    @Test
+    fun ignoresAttributeLabelsAndDuplicateNames() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            SQUAD
+            Speed 90
+            Kylian Mbappe 96
+            Kylian Mbappe 96
+            """.trimIndent()
+        )
+
+        assertEquals(1, result.candidates.size)
+        assertEquals("Kylian Mbappe", result.candidates.single().name)
+    }
+
+    @Test
+    fun rejectsZeroAsAPlayerRating() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            MY SQUAD
+            Player Example 0
+            Valid Player 90
+            """.trimIndent()
+        )
+        assertEquals(1, result.candidates.size)
+        assertEquals("Valid Player", result.candidates.single().name)
+    }
+
+    @Test
+    fun recognisesPlayerProfileScreen() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            PLAYER PROFILE
+            Example Player 91
+            """.trimIndent()
+        )
+        assertEquals("PLAYER_PROFILE", result.screenType)
+        assertEquals(1, result.candidates.size)
+    }
+
+    @Test
+    fun identifiesSettingsWithoutCreatingSquadCandidates() {
+        val result = LiveSquadIntelligence.analyse(
+            """
+            SETTINGS
+            Camera
+            Graphics
+            Controls
+            """.trimIndent()
+        )
+
+        assertEquals("SETTINGS", result.screenType)
+        assertTrue(result.candidates.isEmpty())
+    }
+    @Test
+    fun accumulatesCandidatesAcrossPagesWithoutDuplicates() {
+        val firstPage = listOf(
+            LiveSquadCandidate("Kylian Mbappe", 96),
+            LiveSquadCandidate("Erling Haaland", 95)
+        )
+        val secondPage = listOf(
+            LiveSquadCandidate("Kylian Mbappe", 97),
+            LiveSquadCandidate("Virgil van Dijk", 94)
+        )
+
+        val merged = LiveSquadIntelligence.mergeCandidates(firstPage, secondPage)
+
+        assertEquals(3, merged.size)
+        assertEquals(97, merged.first { it.name == "Kylian Mbappe" }.rating)
+        assertTrue(merged.any { it.name == "Virgil van Dijk" })
+    }
+
+    @Test
+    fun candidateAccumulatorRejectsInvalidRecordsAndHonoursLimit() {
+        val existing = listOf(LiveSquadCandidate("Existing Player", 90))
+        val observed = listOf(
+            LiveSquadCandidate("Invalid Rating", 0),
+            LiveSquadCandidate("New Player", 91),
+            LiveSquadCandidate("Another Player", 92)
+        )
+
+        val merged = LiveSquadIntelligence.mergeCandidates(existing, observed, limit = 2)
+
+        assertEquals(2, merged.size)
+        assertTrue(merged.none { it.name == "Invalid Rating" })
+    }
+
+}

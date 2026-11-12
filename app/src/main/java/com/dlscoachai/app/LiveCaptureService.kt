@@ -26,6 +26,8 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * User-authorised, local-only screen capture foundation.
@@ -100,6 +102,14 @@ class LiveCaptureService : Service() {
             val density = metrics.densityDpi
 
             frameCount = 0
+            // Each explicitly authorised capture is a fresh guided scan session.
+            // Never mix candidates from a previous session into this one.
+            getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
+                .putString("live_squad_candidates", "[]")
+                .putString("live_screen_type", "UNKNOWN")
+                .putString("live_screen_confidence", "LOW")
+                .putLong("live_squad_candidates_time", 0L)
+                .apply()
             lastSampleMs = 0L
             lastAverageBrightness = -1
             lastOcrMs = 0L
@@ -128,9 +138,27 @@ class LiveCaptureService : Service() {
                                         textRecognizer?.process(InputImage.fromBitmap(bitmap, 0))
                                             ?.addOnSuccessListener { result ->
                                                 val recognised = result.text.take(1_200)
-                                                getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE).edit()
-                                                    .putString("capture_ocr_text", recognised)
-                                                    .putLong("capture_ocr_time", System.currentTimeMillis())
+                                                val analysis = LiveSquadIntelligence.analyse(recognised)
+                                                val preferences = getSharedPreferences("dls_coach_data", Context.MODE_PRIVATE)
+                                                val previous = parseLiveSquadCandidates(
+                                                    preferences.getString("live_squad_candidates", "[]") ?: "[]"
+                                                )
+                                                val accumulated = LiveSquadIntelligence.mergeCandidates(
+                                                    previous,
+                                                    analysis.candidates
+                                                )
+                                                val candidatesJson = JSONArray().apply {
+                                                    accumulated.forEach { candidate ->
+                                                        put(JSONObject()
+                                                            .put("name", candidate.name)
+                                                            .put("rating", candidate.rating))
+                                                    }
+                                                }
+                                                preferences.edit()
+                                                    .putString("live_screen_type", analysis.screenType)
+                                                    .putString("live_screen_confidence", analysis.confidence)
+                                                    .putString("live_squad_candidates", candidatesJson.toString())
+                                                    .putLong("live_squad_candidates_time", System.currentTimeMillis())
                                                     .apply()
                                             }
                                             ?.addOnFailureListener {

@@ -51,6 +51,10 @@ private fun findInstalledDlsApp(packageManager: PackageManager): InstalledDlsApp
 fun DlsConnectionScreen(
     captureRequested: Boolean,
     captureStatus: String,
+    liveScreenType: String,
+    liveScreenConfidence: String,
+    liveCandidates: List<LiveSquadCandidate>,
+    onConfirmLiveCandidates: (List<LiveSquadCandidate>) -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     modifier: Modifier = Modifier
@@ -123,6 +127,25 @@ fun DlsConnectionScreen(
                 Text("First Touch Games currently documents profile linking inside DLS through Sign in with Google on Android (or Sign in with Apple on iOS). This protects/transfers your game profile; it does not grant DLS Coach AI access to your account data.")
                 Text("Keep signing in inside DLS itself. Never enter your Google password, DLS password, profile-transfer code or verification code into DLS Coach AI.")
                 Text("For squad analysis, we will read information you deliberately share through screenshots or authorised screen capture. No private account data is requested.")
+            }
+        }
+
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("LIVE SQUAD INTELLIGENCE — REVIEW INBOX", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Screen type: ${liveScreenType.replace("_", " ")} · parser confidence: $liveScreenConfidence")
+                if (liveCandidates.isEmpty()) {
+                    Text("No player candidates are waiting for review. Open your squad or a player profile during an authorised capture session, then return here.")
+                } else {
+                    Text("Possible player records from visible OCR. Check every name and rating against DLS before confirming.")
+                    liveCandidates.forEach { candidate ->
+                        Text("• ${candidate.name} — OVR ${candidate.rating}", fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(onClick = { onConfirmLiveCandidates(liveCandidates) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Confirm and add to my local squad")
+                    }
+                }
+                Text("Confirmation adds only the displayed name and rating. Position is set to unknown and attributes remain unverified. Nothing is changed inside DLS.")
             }
         }
 
