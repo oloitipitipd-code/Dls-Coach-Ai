@@ -104,6 +104,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
     var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
+    var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -162,6 +163,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
+    var showScoutDialog by remember { mutableStateOf(false) }
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var showMatchDialog by remember { mutableStateOf(false) }
     var showOcrDialog by remember { mutableStateOf(false) }
@@ -207,6 +209,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
     LaunchedEffect(progressEntries) { prefs.edit().putString("player_progress", saveProgress(progressEntries)).apply() }
+    LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
@@ -299,11 +302,11 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect", "Scout").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔", "◎")[index]) },
                             label = { Text(label) }
                         )
                     }
@@ -357,9 +360,28 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     },
                     modifier = Modifier.padding(padding)
                 )
+                7 -> ScoutScreen(
+                    squad = players,
+                    candidates = scoutCandidates,
+                    onAdd = { showScoutDialog = true },
+                    onRemove = { candidate -> scoutCandidates = scoutCandidates.filterNot { it.name.equals(candidate.name, true) } },
+                    modifier = Modifier.padding(padding)
+                )
             }
         }
 
+        if (showScoutDialog) {
+            AddPlayerDialog(
+                initialPlayer = null,
+                onDismiss = { showScoutDialog = false },
+                onAdd = { candidate ->
+                    if (scoutCandidates.none { it.name.equals(candidate.name, true) } && players.none { it.name.equals(candidate.name, true) }) {
+                        scoutCandidates = scoutCandidates + candidate
+                    }
+                    showScoutDialog = false
+                }
+            )
+        }
         if (showPlayerDialog) {
             AddPlayerDialog(
                 initialPlayer = null,
