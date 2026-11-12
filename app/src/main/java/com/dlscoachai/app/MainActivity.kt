@@ -1306,9 +1306,11 @@ fun roleScore(p: Player, role: String): Int {
 }
 
 fun optimiseLineup(players: List<Player>, formation: String): List<LineupSlot> {
-    val available = players.filter { it.position != "UNK" }.toMutableList()
+    // Keep unknown-position outfielders eligible with the provisional OVR-minus-8 score.
+    // Goalkeepers remain locked to the GK slot and are never selected as outfielders.
+    val available = players.toMutableList()
     return formationSlots(formation).map { role ->
-        val candidates = available.filter { role != "GK" || it.position == "GK" }
+        val candidates = available.filter { if (role == "GK") it.position == "GK" else it.position != "GK" }
         val chosen = candidates.maxByOrNull { roleScore(it, role) }
             ?.takeIf { roleScore(it, role) >= 0 }
         if (chosen != null) available.remove(chosen)
