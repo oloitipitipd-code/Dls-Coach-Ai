@@ -22,6 +22,8 @@ object CloudCredentialStore {
     private const val PREF_CIPHERTEXT = "cloud_ai_access_token_enc"
 
     fun read(preferences: SharedPreferences): String {
+        // Remove the legacy plaintext preference instead of migrating an exposed secret.
+        preferences.edit().remove("cloud_ai_access_token").apply()
         val encoded = preferences.getString(PREF_CIPHERTEXT, null) ?: return ""
         return runCatching {
             val payload = Base64.decode(encoded, Base64.NO_WRAP)
