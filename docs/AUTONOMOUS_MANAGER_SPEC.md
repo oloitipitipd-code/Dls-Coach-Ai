@@ -540,3 +540,32 @@ External services are optional helpers, never dependencies for core coaching:
 The Game Link screen uses Android's launcher-intent visibility to look for an installed launcher activity whose visible app label contains "Dream League Soccer". If found, it launches that activity using a normal Android intent. This is app discovery and launch, not a privileged game integration. The screen reuses the existing user-authorised MediaProjection controls and lets the user record their own camera, graphics/performance, controls, sound and other settings notes in local preferences.
 
 The settings profile does not write into DLS or apply values automatically. DLS internal settings, account state, live game state and player data remain outside the app's direct control unless First Touch Games supplies a documented supported interface. OCR remains limited to visible text and must not be represented as reliable gameplay understanding. Keep all game-control, input-injection, private-file and reverse-engineering restrictions in force.
+
+
+## User-selected autonomous manager permission profile
+
+The user's selected mode is **Full autonomous management**, with explicit approval required for purchases and irreversible actions. Implement this as a local-first coaching-agent policy, not as permission to bypass game controls or platform safeguards.
+
+### Allowed autonomous work inside DLS Coach AI
+- Recalculate role-fit starting XI and substitute suggestions whenever confirmed squad data, formation or tactical preferences change.
+- Refresh tactical recommendations and squad-balance warnings from confirmed local records.
+- Prepare player-development priorities from recorded attributes and dated progress snapshots.
+- Summarise recorded match results, player contributions and manually tagged events.
+- Maintain local decision history and clearly label recommendations as estimates.
+- Launch DLS through its ordinary Android launcher intent when the user requests it.
+- Process screen text only after the Android MediaProjection permission prompt; keep processing local and expose a persistent stop control.
+
+### Mandatory approval and manual-only actions
+- Any purchase, transfer, player signing/release, upgrade, reward claim or spending of coins/gems.
+- Any irreversible change, account/profile operation, credential use or change that could affect the user's DLS account.
+- Any action that changes DLS settings or sends input to the game.
+
+The app must not claim to perform an action unless an authorised integration actually exists and its success is verified. At this release, no official public DLS gameplay/account API or authorised control interface has been established. Therefore the app remains observational and advisory: the user performs in-game actions manually, then may record the verified outcome.
+
+### Permission UX and audit
+- Show **Autonomous local management: ON** in the Manager dashboard.
+- Show a permanent **Approval required** policy for purchases, spending and irreversible/account actions.
+- Never infer live coin/gem balances, inventory, player upgrades or reward availability from OCR unless the value is clearly visible; treat OCR as an unconfirmed draft.
+- Record recommendations and user decisions locally. A user marking an action tested is a user statement, not independent verification.
+- Do not add Accessibility tap automation, input injection, game-memory inspection, reverse engineering, traffic interception, private endpoints or modified game clients.
+- No paid API or cloud service is enabled by this policy. Any future cloud processing requires separate cost, privacy and data-use disclosure and opt-in.
