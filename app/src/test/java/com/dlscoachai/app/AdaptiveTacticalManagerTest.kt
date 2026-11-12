@@ -45,6 +45,13 @@ class AdaptiveTacticalManagerTest {
         assertTrue(AdaptiveTacticalManager.rankedOptions(emptyList(), "4-3-3").isEmpty())
     }
 
+    @Test fun recognisesOpponentOnlyFourTwoFourShape() {
+        val result = AdaptiveTacticalManager.recommend(squad, "4-2-4", "Wide play")
+        assertNotNull(result)
+        assertTrue(result!!.confidence != "LOW")
+        assertTrue(result.tacticalFit > 0)
+    }
+
     @Test fun unknownOpponentShapeIsLowConfidence() {
         val result = AdaptiveTacticalManager.recommend(squad, "Unknown", "Unknown")
         assertNotNull(result)
