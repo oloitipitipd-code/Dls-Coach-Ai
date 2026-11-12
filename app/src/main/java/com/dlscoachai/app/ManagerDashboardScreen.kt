@@ -29,7 +29,14 @@ fun ManagerDashboardScreen(
     prefs: SharedPreferences,
     modifier: Modifier = Modifier
 ) {
-    val aiAssessment = remember(players, matches) { chooseBestFormation(players) }
+    var opponentFormation by remember { mutableStateOf(prefs.getString("manager_opponent_formation", "Unknown") ?: "Unknown") }
+    var opponentStyle by remember { mutableStateOf(prefs.getString("manager_opponent_style", "Unknown") ?: "Unknown") }
+    var opponentFormationMenu by remember { mutableStateOf(false) }
+    var opponentStyleMenu by remember { mutableStateOf(false) }
+    val adaptiveRecommendation = remember(players, opponentFormation, opponentStyle) {
+        AdaptiveTacticalManager.recommend(players, opponentFormation, opponentStyle)
+    }
+    val aiAssessment = adaptiveRecommendation?.assessment ?: remember(players) { chooseBestFormation(players) }
     val aiFormation = aiAssessment?.formation ?: "Not enough squad data"
     val aiLineup = aiAssessment?.lineup.orEmpty()
     val aiBench = aiAssessment?.let { benchRecommendations(players, it.formation) }.orEmpty()
@@ -68,8 +75,57 @@ fun ManagerDashboardScreen(
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("OPPONENT-ADAPTIVE TACTICAL MANAGER", fontWeight = FontWeight.Bold)
+                Text("The manager compares all six supported formations using your squad's role fit plus the opponent's observed shape and playing style.")
+                Text("Opponent formation")
+                Box {
+                    OutlinedButton(onClick = { opponentFormationMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(opponentFormation)
+                    }
+                    DropdownMenu(expanded = opponentFormationMenu, onDismissRequest = { opponentFormationMenu = false }) {
+                        (listOf("Unknown", "4-2-4") + AdaptiveTacticalManager.supportedFormations).distinct().forEach { option ->
+                            DropdownMenuItem(text = { Text(option) }, onClick = {
+                                opponentFormation = option
+                                prefs.edit().putString("manager_opponent_formation", option).apply()
+                                opponentFormationMenu = false
+                            })
+                        }
+                    }
+                }
+                Text("Opponent's observed playing style")
+                Box {
+                    OutlinedButton(onClick = { opponentStyleMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(opponentStyle)
+                    }
+                    DropdownMenu(expanded = opponentStyleMenu, onDismissRequest = { opponentStyleMenu = false }) {
+                        AdaptiveTacticalManager.opponentStyles.forEach { option ->
+                            DropdownMenuItem(text = { Text(option) }, onClick = {
+                                opponentStyle = option
+                                prefs.edit().putString("manager_opponent_style", option).apply()
+                                opponentStyleMenu = false
+                            })
+                        }
+                    }
+                }
+                Text("AI recommendation: ${adaptiveRecommendation?.assessment?.formation ?: "Not enough squad data"}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                if (adaptiveRecommendation != null) {
+                    Text("Confidence: ${adaptiveRecommendation.confidence} · Tactical fit: ${adaptiveRecommendation.tacticalFit}/14")
+                    Text(adaptiveRecommendation.reason, style = MaterialTheme.typography.bodySmall)
+                    Text("Other leading options", fontWeight = FontWeight.SemiBold)
+                    AdaptiveTacticalManager.rankedOptions(players, opponentFormation, opponentStyle).take(3).forEachIndexed { index, option ->
+                        Text("${index + 1}. ${option.assessment.formation} · ${option.assessment.filledSlots}/11 positions · tactical fit ${option.tacticalFit}")
+                    }
+                } else {
+                    Text("Add and confirm your squad before the manager can select a formation.")
+                }
+                Text("Important: opponent formation and style are currently entered from what you observe. Automatic live opponent recognition is not implemented yet. This is a tactical recommendation; it does not change DLS controls or the in-game formation.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("AI-SELECTED TEAM", fontWeight = FontWeight.Bold)
-                Text("Formation selected from your registered squad: $aiFormation", fontWeight = FontWeight.SemiBold)
+                Text("Formation selected for the current opponent profile: $aiFormation", fontWeight = FontWeight.SemiBold)
                 Text("Confidence: ${aiAssessment?.confidence ?: "INSUFFICIENT DATA"} · Filled positions: ${aiAssessment?.filledSlots ?: 0}/11")
                 if (players.isEmpty()) {
                     Text("No squad is registered yet. Import all player screens to let the AI build your team.")
