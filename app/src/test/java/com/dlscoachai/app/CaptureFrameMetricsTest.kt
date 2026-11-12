@@ -2,6 +2,7 @@ package com.dlscoachai.app
 
 import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CaptureFrameMetricsTest {
@@ -149,4 +150,33 @@ class PlayerContributionTrendTest {
         val matches = List(9) { Match("Win", 1, 0, "", scorers = listOf("Player A")) }
         assertEquals(emptyList<PlayerContributionTrend>(), playerContributionTrends(matches))
     }
+    @Test
+    fun emptySavedSquadRemainsEmptyAfterReload() {
+        assertTrue(loadStoredPlayers("[]", hasStoredValue = true).isEmpty())
+    }
+
+    @Test
+    fun firstLaunchUsesSeedSquadOnlyWhenNoSavedValueExists() {
+        assertTrue(loadStoredPlayers(null, hasStoredValue = false).isNotEmpty())
+    }
+
+    @Test
+    fun malformedSavedSquadDoesNotSilentlyRestoreSeedPlayers() {
+        assertTrue(loadStoredPlayers("{broken", hasStoredValue = true).isEmpty())
+    }
+
+    @Test
+    fun diamondFormationHasCorrectRoleSlots() {
+        assertEquals(
+            listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "CM", "CAM", "ST", "ST"),
+            formationSlots("4-1-2-1-2")
+        )
+    }
+
+    @Test
+    fun supportedFormationsAlwaysHaveElevenSlots() {
+        listOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
+            .forEach { assertEquals(it, 11, formationSlots(it).size) }
+    }
+
 }

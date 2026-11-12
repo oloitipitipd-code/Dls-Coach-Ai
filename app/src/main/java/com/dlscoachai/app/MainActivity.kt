@@ -53,8 +53,19 @@ data class Player(
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String, val scorers: List<String> = emptyList(), val assists: List<String> = emptyList())
 data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
-data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
+data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList(), val managerData: String = "{}")
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
+
+fun parseLiveSquadCandidates(raw: String): List<LiveSquadCandidate> = runCatching {
+    val array = JSONArray(raw)
+    (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        val name = item.optString("name").trim()
+        val rating = item.optInt("rating", -1)
+        if (name.isBlank() || rating !in 1..100) null
+        else LiveSquadCandidate(name, rating)
+    }
+}.getOrDefault(emptyList())
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,13 +108,16 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dls_coach_data", 0) }
     var tab by remember { mutableIntStateOf(0) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var captureRequested by remember { mutableStateOf(prefs.getBoolean("capture_active", false)) }
     var captureStatus by remember { mutableStateOf(prefs.getString("capture_status", "Not started") ?: "Not started") }
     var captureFrames by remember { mutableLongStateOf(prefs.getLong("capture_frames", 0L)) }
     var captureFrameWidth by remember { mutableIntStateOf(prefs.getInt("capture_frame_width", 0)) }
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
-    var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
+    var liveScreenType by remember { mutableStateOf(prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN") }
+    var liveScreenConfidence by remember { mutableStateOf(prefs.getString("live_screen_confidence", "LOW") ?: "LOW") }
+    var liveCandidatesJson by remember { mutableStateOf(prefs.getString("live_squad_candidates", "[]") ?: "[]") }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -115,7 +129,9 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 captureFrameWidth = prefs.getInt("capture_frame_width", 0)
                 captureFrameHeight = prefs.getInt("capture_frame_height", 0)
                 captureBrightness = prefs.getInt("capture_average_brightness", -1)
-                captureOcrText = prefs.getString("capture_ocr_text", "") ?: ""
+                liveScreenType = prefs.getString("live_screen_type", "UNKNOWN") ?: "UNKNOWN"
+                liveScreenConfidence = prefs.getString("live_screen_confidence", "LOW") ?: "LOW"
+                liveCandidatesJson = prefs.getString("live_squad_candidates", "[]") ?: "[]"
             }
         }
         activity?.lifecycle?.addObserver(observer)
@@ -144,9 +160,22 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         }
     }
 
-    val startCapture = {
+    val launchScreenCapture = {
         val manager = context.getSystemService(android.content.Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         capturePermissionLauncher.launch(manager.createScreenCaptureIntent())
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchScreenCapture()
+        else Toast.makeText(context, "Allow notifications so Android can show the active capture status and stop control.", Toast.LENGTH_LONG).show()
+    }
+    val startCapture = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            launchScreenCapture()
+        }
     }
     val stopCapture = {
         context.startService(Intent(context, LiveCaptureService::class.java).setAction(LiveCaptureService.ACTION_STOP))
@@ -154,7 +183,10 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
         captureStatus = "Stopping capture…"
     }
     var players by remember {
-        mutableStateOf(loadPlayers(prefs.getString("players", "[]") ?: "[]").ifEmpty { initialSquad() })
+        mutableStateOf(loadStoredPlayers(
+            raw = prefs.getString("players", null),
+            hasStoredValue = prefs.contains("players")
+        ))
     }
     var matches by remember { mutableStateOf(loadMatches(prefs.getString("matches", "[]") ?: "[]")) }
     var progressEntries by remember { mutableStateOf(loadProgress(prefs.getString("player_progress", "[]") ?: "[]")) }
@@ -226,7 +258,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(encodeBackup(players, matches, formation, style, progressEntries).toByteArray(Charsets.UTF_8))
+                stream.write(encodeBackup(players, matches, formation, style, progressEntries, exportManagerData(prefs)).toByteArray(Charsets.UTF_8))
             } ?: error("Could not open the selected destination.")
         }.onSuccess {
             Toast.makeText(context, "Backup exported successfully.", Toast.LENGTH_LONG).show()
@@ -246,6 +278,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             progressEntries = backup.progress
             formation = backup.formation
             style = backup.style
+            restoreManagerData(prefs, backup.managerData)
             Toast.makeText(context, "Backup restored successfully.", Toast.LENGTH_LONG).show()
         }.onFailure {
             Toast.makeText(context, "Restore failed: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -298,13 +331,33 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤")[index]) },
                             label = { Text(label) }
                         )
+                    }
+                    NavigationBarItem(
+                        selected = tab >= 4,
+                        onClick = { showMoreMenu = true },
+                        icon = { Text("⋯") },
+                        label = { Text("More") }
+                    )
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false }
+                    ) {
+                        listOf("Coach", "Manager", "Game Link", "Connect").forEachIndexed { index, label ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    tab = index + 4
+                                    showMoreMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -319,7 +372,6 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     captureFrameWidth = captureFrameWidth,
                     captureFrameHeight = captureFrameHeight,
                     captureBrightness = captureBrightness,
-                    captureOcrText = captureOcrText,
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
@@ -337,14 +389,29 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                 4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
                 }, modifier = Modifier.padding(padding))
-                5 -> DlsConnectionScreen(
+                5 -> ManagerDashboardScreen(players, matches, formation, style, prefs, Modifier.padding(padding))
+                6 -> DlsConnectionScreen(
                     captureRequested = captureRequested,
                     captureStatus = captureStatus,
+                    liveScreenType = liveScreenType,
+                    liveScreenConfidence = liveScreenConfidence,
+                    liveCandidates = parseLiveSquadCandidates(liveCandidatesJson),
+                    onConfirmLiveCandidates = { candidates ->
+                        val existingNames = players.map { it.name.trim().lowercase() }.toSet()
+                        val additions = candidates
+                            .filterNot { it.name.trim().lowercase() in existingNames }
+                            .distinctBy { it.name.trim().lowercase() }
+                            .map { Player(name = it.name, position = "UNK", rating = it.rating, statsKnown = false) }
+                        players = players + additions
+                        prefs.edit().putString("live_squad_candidates", "[]").apply()
+                        liveCandidatesJson = "[]"
+                        Toast.makeText(context, "Added ${additions.size} confirmed player record(s). Positions and attributes remain unverified.", Toast.LENGTH_LONG).show()
+                    },
                     onStartCapture = startCapture,
                     onStopCapture = stopCapture,
                     modifier = Modifier.padding(padding)
                 )
-                6 -> IntegrationsScreen(
+                7 -> IntegrationsScreen(
                     onShareReport = {
                         val report = buildCoachReport(players, matches, formation, style, progressEntries)
                         val send = Intent(Intent.ACTION_SEND).apply {
@@ -442,7 +509,7 @@ fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, captureFrameWidth: Int, captureFrameHeight: Int, captureBrightness: Int, captureOcrText: String, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onExport: () -> Unit, onImport: () -> Unit, captureRequested: Boolean, captureStatus: String, captureFrames: Long, captureFrameWidth: Int, captureFrameHeight: Int, captureBrightness: Int, onStartCapture: () -> Unit, onStopCapture: () -> Unit, modifier: Modifier = Modifier) {
     Page(modifier) {
         Text("Welcome, Coach", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Build your squad, record matches and turn your results into better decisions.")
@@ -475,11 +542,8 @@ fun HomeScreen(players: List<Player>, matches: List<Match>, formation: String, s
                 if (captureBrightness >= 0) {
                     Text("Average screen brightness: $captureBrightness / 255", style = MaterialTheme.typography.labelSmall)
                 }
-                Text("LATEST ON-SCREEN TEXT (ON-DEVICE OCR)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
-                Text(captureOcrText.ifBlank { "No readable text detected yet. Keep the DLS screen visible during an authorised capture session." }, style = MaterialTheme.typography.bodySmall)
-                if (captureOcrText.isNotBlank()) {
-                    Text("OCR is raw text recognition only. It does not yet identify players, ball movement, score events or tactical situations.", style = MaterialTheme.typography.bodySmall)
-                }
+                Text("ON-DEVICE OCR PRIVACY", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                Text("Raw screen text is processed locally for this sample and is not retained. Only possible player names and ratings are saved locally for your review; verify them before adding them to your squad.", style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (captureRequested) "Capture is active. Use the persistent Android notification or the button below to stop it."
                     else "Start a user-authorised screen-capture session. If Android offers app-window sharing, choose DLS 26.",
@@ -863,8 +927,9 @@ fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (
 @Composable
 fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
-    var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
-    var rating by remember { mutableStateOf(initialPlayer?.rating?.toString() ?: "90") }
+    var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "UNK") }
+    var rating by remember { mutableStateOf(initialPlayer?.rating?.toString() ?: "") }
+    var showAttributes by remember(initialPlayer) { mutableStateOf(initialPlayer?.statsKnown == true) }
     val statNames = listOf("SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC", "GKR", "GKH")
     val stats = remember(initialPlayer) { mutableStateMapOf<String, String>().apply {
         statNames.forEachIndexed { index, key ->
@@ -872,44 +937,89 @@ fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd:
             put(key, if (initialPlayer?.statsKnown == true) value.toString() else "")
         }
     } }
-    val positions = listOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
+    val positions = listOf("UNK", "GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST")
+    val ratingValue = rating.toIntOrNull()
+    val attributeValues = statNames.map { stats[it]?.toIntOrNull() }
+    val attributesValid = attributeValues.all { it != null && it in 1..100 }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialPlayer == null) "Add player and card stats" else "Edit player profile") },
+        title = { Text(if (initialPlayer == null) "Add player" else "Edit player profile") },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 OutlinedTextField(name, { name = it }, label = { Text("Player name") }, singleLine = true)
-                OutlinedTextField(rating, { rating = it.filter(Char::isDigit).take(3) }, label = { Text("Overall rating") }, singleLine = true)
+                OutlinedTextField(
+                    rating,
+                    { rating = it.filter(Char::isDigit).take(3) },
+                    label = { Text("Overall rating (1–100)") },
+                    singleLine = true
+                )
                 Text("Natural position")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    positions.forEach { p -> FilterChip(selected = position == p, onClick = { position = p }, label = { Text(p) }) }
+                    positions.forEach { p ->
+                        FilterChip(
+                            selected = position == p,
+                            onClick = { position = p },
+                            label = { Text(if (p == "UNK") "Unknown" else p) }
+                        )
+                    }
                 }
-                Text("Enter the numbers exactly as shown on the in-game player card (1–100). For a goalkeeper, prioritise GKR and GKH. All fields must be verified before saving.", style = MaterialTheme.typography.bodySmall)
-                statNames.forEach { stat ->
-                    OutlinedTextField(
-                        value = stats[stat] ?: "70",
-                        onValueChange = { stats[stat] = it.filter(Char::isDigit).take(3) },
-                        label = { Text(stat) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                Text(
+                    "You can save the player's name, rating and position first. Card attributes are optional and can be added later.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = showAttributes, onCheckedChange = { showAttributes = it })
+                    Text("Enter all 10 card attributes now")
+                }
+                if (showAttributes) {
+                    Text(
+                        "Copy every value exactly from the in-game card. All ten values must be between 1 and 100. Do not estimate unreadable values.",
+                        style = MaterialTheme.typography.bodySmall
                     )
+                    statNames.forEach { stat ->
+                        OutlinedTextField(
+                            value = stats[stat] ?: "",
+                            onValueChange = { stats[stat] = it.filter(Char::isDigit).take(3) },
+                            label = { Text(stat) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = {
-            val value = rating.toIntOrNull()
-            val numbers = statNames.map { stats[it]?.toIntOrNull() }
-            if (name.isNotBlank() && value != null && value in 1..100 && numbers.all { it != null && it in 1..100 }) {
-                onAdd(Player(name.trim(), position, value,
-                    numbers[0]!!, numbers[1]!!, numbers[2]!!, numbers[3]!!, numbers[4]!!,
-                    numbers[5]!!, numbers[6]!!, numbers[7]!!, numbers[8]!!, numbers[9]!!,
-                    statsKnown = true
-                ))
-            }
-        }) { Text("Save player") } },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && ratingValue != null && ratingValue in 1..100 &&
+                    (!showAttributes || attributesValid),
+                onClick = {
+                    val value = ratingValue ?: return@TextButton
+                    if (showAttributes) {
+                        onAdd(Player(
+                            name = name.trim(),
+                            position = position,
+                            rating = value,
+                            spe = attributeValues[0]!!,
+                            acc = attributeValues[1]!!,
+                            sta = attributeValues[2]!!,
+                            str = attributeValues[3]!!,
+                            con = attributeValues[4]!!,
+                            pas = attributeValues[5]!!,
+                            sho = attributeValues[6]!!,
+                            tac = attributeValues[7]!!,
+                            gkr = attributeValues[8]!!,
+                            gkh = attributeValues[9]!!,
+                            statsKnown = true
+                        ))
+                    } else {
+                        onAdd(Player(name = name.trim(), position = position, rating = value, statsKnown = false))
+                    }
+                }
+            ) { Text("Save player") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
@@ -982,7 +1092,7 @@ fun AddMatchDialog(players: List<Player>, onDismiss: () -> Unit, onAdd: (Match) 
 }
 
 fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
-    val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9]?[0-9])$")
+    val ratingAtEnd = Regex("^(.{2,32}?)\\s+(100|[1-9][0-9]?)$")
     val ignored = setOf("overall rating", "rating", "speed", "acceleration", "stamina", "strength", "control", "passing", "shooting", "tackling", "goalkeeping", "height", "weight", "player")
     return raw.lineSequence()
         .map { it.trim().replace(Regex("\\s+"), " ") }
@@ -999,32 +1109,68 @@ fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
         .toList()
 }
 
-fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String =
+fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList(), managerData: String = "{}"): String =
     JSONObject()
         .put("app", "DLS Coach AI")
-        .put("schemaVersion", 2)
+        .put("schemaVersion", 3)
         .put("exportedAt", System.currentTimeMillis())
         .put("players", JSONArray(savePlayers(players)))
         .put("matches", JSONArray(saveMatches(matches)))
         .put("progress", JSONArray(saveProgress(progress)))
         .put("formation", formation)
         .put("style", style)
+        .put("managerData", JSONObject(managerData))
         .toString(2)
 
 fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
-    require(root.optInt("schemaVersion", -1) in 1..2) { "Unsupported backup version." }
-    val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
-    val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
-    require(players.isNotEmpty()) { "The backup contains no readable player records." }
+    require(root.optInt("schemaVersion", -1) in 1..3) { "Unsupported backup version." }
+    val playerArray = root.optJSONArray("players")
+        ?: error("The backup is missing its player list.")
+    val matchArray = root.optJSONArray("matches")
+        ?: error("The backup is missing its match list.")
+    require(playerArray.length() <= 100) { "The backup contains too many player records." }
+    require(matchArray.length() <= 10000) { "The backup contains too many match records." }
+    require((0 until playerArray.length()).all { playerArray.optJSONObject(it) != null }) {
+        "The backup contains an invalid player record."
+    }
+    require((0 until matchArray.length()).all { matchArray.optJSONObject(it) != null }) {
+        "The backup contains an invalid match record."
+    }
+    val players = loadPlayers(playerArray.toString())
+    val matches = loadMatches(matchArray.toString())
+    require(players.size == playerArray.length()) { "One or more player records could not be read." }
+    require(matches.size == matchArray.length()) { "One or more match records could not be read." }
+    val supportedPositions = setOf("GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST", "UNK")
+    require(players.all { player ->
+        player.name.isNotBlank() && player.rating in 1..100 && player.position in supportedPositions &&
+            (!player.statsKnown || listOf(
+                player.spe, player.acc, player.sta, player.str, player.con,
+                player.pas, player.sho, player.tac, player.gkr, player.gkh
+            ).all { it in 1..100 })
+    }) { "The backup contains invalid player names, positions, ratings or verified attributes." }
+    require(matches.all { match ->
+        match.result in setOf("Win", "Draw", "Loss") && match.scored in 0..99 && match.conceded in 0..99
+    }) { "The backup contains invalid match result or score data." }
+    val progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]")
+    val formation = root.optString("formation", "5-3-2")
+    val supportedFormations = setOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
+    require(formation in supportedFormations) { "The backup contains an unsupported formation." }
     return CoachBackup(
         players = players,
         matches = matches,
-        progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]"),
-        formation = root.optString("formation", "5-3-2"),
-        style = root.optString("style", "Aggressive attack + compact defence")
+        progress = progress,
+        formation = formation,
+        style = root.optString("style", "Aggressive attack + compact defence"),
+        managerData = root.optJSONObject("managerData")?.toString() ?: "{}"
     )
+}
+
+/** Preserves an intentionally empty squad instead of silently reseeding it on every launch. */
+fun loadStoredPlayers(raw: String?, hasStoredValue: Boolean): List<Player> {
+    if (!hasStoredValue) return initialSquad()
+    return loadPlayers(raw ?: "[]")
 }
 
 fun initialSquad(): List<Player> = listOf(
@@ -1114,6 +1260,7 @@ fun formationSlots(formation: String): List<String> = when (formation) {
     "3-5-2" -> listOf("GK", "CB", "CB", "CB", "LM", "CM", "CDM", "CM", "RM", "ST", "ST")
     "4-4-2" -> listOf("GK", "LB", "CB", "CB", "RB", "LM", "CM", "CM", "RM", "ST", "ST")
     "4-3-3" -> listOf("GK", "LB", "CB", "CB", "RB", "CM", "CDM", "CM", "LW", "ST", "RW")
+    "4-1-2-1-2" -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CM", "CM", "CAM", "ST", "ST")
     else -> listOf("GK", "LB", "CB", "CB", "RB", "CDM", "CDM", "LW", "CAM", "RW", "ST")
 }
 
@@ -1391,8 +1538,14 @@ fun nextCoachingActions(players: List<Player>, matches: List<Match>, formation: 
 }
 
 fun buildCoachReport(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String {
-    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") {
-        "- ${it.name}: ${it.position}, OVR ${it.rating}; SPE ${it.spe}, ACC ${it.acc}, STA ${it.sta}, STR ${it.str}, CON ${it.con}, PAS ${it.pas}, SHO ${it.sho}, TAC ${it.tac}, GKR ${it.gkr}, GKH ${it.gkh}"
+    val squad = if (players.isEmpty()) "No players entered." else players.joinToString("\n") { player ->
+        val position = player.position.takeIf { it != "UNK" } ?: "position not entered"
+        val attributes = if (player.statsKnown) {
+            "; SPE ${player.spe}, ACC ${player.acc}, STA ${player.sta}, STR ${player.str}, CON ${player.con}, PAS ${player.pas}, SHO ${player.sho}, TAC ${player.tac}, GKR ${player.gkr}, GKH ${player.gkh}"
+        } else {
+            "; card attributes not entered"
+        }
+        "- ${player.name}: $position, OVR ${player.rating}$attributes"
     }
     val games = if (matches.isEmpty()) "No match results entered." else matches.take(10).joinToString("\n") { match ->
         val scorers = if (match.scorers.isEmpty()) "Scorers not recorded" else "Scorers: ${match.scorers.joinToString(", ")}"
