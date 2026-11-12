@@ -1335,7 +1335,7 @@ fun assessFormation(players: List<Player>, formation: String): FormationAssessme
     val lineup = optimiseLineup(players, formation)
     val selected = lineup.mapNotNull { it.player }
     val filled = selected.size
-    val average = if (selected.isEmpty()) 0.0 else selected.map { roleScore(it, lineup.first { slot -> slot.player == it }.position) }.average()
+    val average = if (selected.isEmpty()) 0.0 else lineup.mapNotNull { slot -> slot.player?.let { slot.score.toDouble() } }.average()
     val knownPositions = selected.count { it.position != "UNK" }
     val knownAttributes = selected.count { it.statsKnown }
     val confidence = when {
