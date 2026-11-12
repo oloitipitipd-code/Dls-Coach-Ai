@@ -27,6 +27,7 @@ fun ManagerDashboardScreen(
     formation: String,
     style: String,
     prefs: SharedPreferences,
+    onFormationSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var opponentFormation by remember { mutableStateOf(prefs.getString("manager_opponent_formation", "Unknown") ?: "Unknown") }
@@ -38,6 +39,10 @@ fun ManagerDashboardScreen(
     }
     val aiAssessment = adaptiveRecommendation?.assessment ?: remember(players) { chooseBestFormation(players) }
     val aiFormation = aiAssessment?.formation ?: "Not enough squad data"
+    LaunchedEffect(aiAssessment?.formation) {
+        val selected = aiAssessment?.formation
+        if (selected != null && selected != formation) onFormationSelected(selected)
+    }
     val aiLineup = aiAssessment?.lineup.orEmpty()
     val aiBench = aiAssessment?.let { benchRecommendations(players, it.formation) }.orEmpty()
     var coins by remember { mutableStateOf(prefs.getString("manager_coins", "") ?: "") }
@@ -109,7 +114,7 @@ fun ManagerDashboardScreen(
                 }
                 Text("AI recommendation: ${adaptiveRecommendation?.assessment?.formation ?: "Not enough squad data"}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 if (adaptiveRecommendation != null) {
-                    Text("Confidence: ${adaptiveRecommendation.confidence} · Tactical fit: ${adaptiveRecommendation.tacticalFit}/14")
+                    Text("Confidence: ${adaptiveRecommendation.confidence} · Tactical fit score: ${adaptiveRecommendation.tacticalFit}")
                     Text(adaptiveRecommendation.reason, style = MaterialTheme.typography.bodySmall)
                     Text("Other leading options", fontWeight = FontWeight.SemiBold)
                     AdaptiveTacticalManager.rankedOptions(players, opponentFormation, opponentStyle).take(3).forEachIndexed { index, option ->
@@ -118,7 +123,7 @@ fun ManagerDashboardScreen(
                 } else {
                     Text("Add and confirm your squad before the manager can select a formation.")
                 }
-                Text("Important: opponent formation and style are currently entered from what you observe. Automatic live opponent recognition is not implemented yet. This is a tactical recommendation; it does not change DLS controls or the in-game formation.", style = MaterialTheme.typography.bodySmall)
+                Text("The AI automatically updates the selected formation in this companion when the opponent profile changes. You still apply that formation in DLS yourself. Opponent formation and style are currently entered from what you observe; automatic live opponent recognition is not implemented.", style = MaterialTheme.typography.bodySmall)
             }
         }
 
