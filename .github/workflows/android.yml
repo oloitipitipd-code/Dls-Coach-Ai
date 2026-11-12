@@ -1,4 +1,4 @@
-name: Build DLS Coach AI APK
+name: Build DLS Ultimate AI (Android + Web)
 
 on:
   workflow_dispatch:
