@@ -104,5 +104,5 @@ export function generateLocalCoachReport(players: CoachPlayer[], matches: CoachM
     lines.push("This is descriptive analysis of manually entered results, not proof that a formation caused the outcomes.");
   }
   lines.push("", "DATA QUALITY", "Only user-entered player and match records were analysed. Opponent formation, live events, player attributes not entered, and DLS-specific mechanics are unknown unless separately documented.");
-  return lines.join("\\n");
+  return lines.join("\n");
 }
