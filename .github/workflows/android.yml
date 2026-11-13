@@ -56,6 +56,8 @@ jobs:
           node-version: "20"
       - name: Install web dependencies
         run: npm install
+      - name: Test offline web coaching engine
+        run: npm test
       - name: Build web companion
         run: npm run build
       - name: Upload web build
