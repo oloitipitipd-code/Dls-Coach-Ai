@@ -1,9 +1,11 @@
-name: Build DLS Coach AI APK
+name: Build DLS Ultimate AI (Android + Web)
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches: [ "main" ]
+  push:
+    branches: [ "main", "work/finalize-dls-coach-ai" ]
 
 permissions:
   contents: read
@@ -38,4 +40,29 @@ jobs:
           name: DLS-Coach-AI-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 14
+
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install web dependencies
+        run: npm install
+      - name: Test offline web coaching engine
+        run: npm test
+      - name: Build web companion
+        run: npm run build
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: DLS-Ultimate-AI-web-dist
+          path: web/dist
           retention-days: 14

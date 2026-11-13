@@ -53,8 +53,9 @@ data class Player(
 data class LineupSlot(val position: String, val player: Player?, val score: Int)
 data class Match(val result: String, val scored: Int, val conceded: Int, val note: String, val scorers: List<String> = emptyList(), val assists: List<String> = emptyList())
 data class PlayerProgress(val playerName: String, val rating: Int, val attribute: String, val attributeValue: Int, val recordedAt: Long, val note: String = "")
-data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList())
+data class CoachBackup(val players: List<Player>, val matches: List<Match>, val formation: String, val style: String, val progress: List<PlayerProgress> = emptyList(), val scoutCandidates: List<Player> = emptyList())
 data class OcrPlayerDraft(val name: String, val rating: Int, val sourceLine: String)
+data class RecruitmentAssessment(val candidate: Player, val decision: String, val reason: String, val score: Int)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,6 +105,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var captureFrameHeight by remember { mutableIntStateOf(prefs.getInt("capture_frame_height", 0)) }
     var captureBrightness by remember { mutableIntStateOf(prefs.getInt("capture_average_brightness", -1)) }
     var captureOcrText by remember { mutableStateOf(prefs.getString("capture_ocr_text", "") ?: "") }
+    var scoutCandidates by remember { mutableStateOf(loadPlayers(prefs.getString("scout_candidates", "[]") ?: "[]")) }
 
     DisposableEffect(context) {
         val activity = context as? ComponentActivity
@@ -162,6 +164,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     var formation by remember { mutableStateOf(prefs.getString("formation", "5-3-2") ?: "5-3-2") }
     var style by remember { mutableStateOf(prefs.getString("style", "Aggressive attack + compact defence") ?: "Aggressive attack + compact defence") }
     var showPlayerDialog by remember { mutableStateOf(false) }
+    var showScoutDialog by remember { mutableStateOf(false) }
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var showMatchDialog by remember { mutableStateOf(false) }
     var showOcrDialog by remember { mutableStateOf(false) }
@@ -207,6 +210,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     LaunchedEffect(players) { prefs.edit().putString("players", savePlayers(players)).apply() }
     LaunchedEffect(matches) { prefs.edit().putString("matches", saveMatches(matches)).apply() }
     LaunchedEffect(progressEntries) { prefs.edit().putString("player_progress", saveProgress(progressEntries)).apply() }
+    LaunchedEffect(scoutCandidates) { prefs.edit().putString("scout_candidates", savePlayers(scoutCandidates)).apply() }
     LaunchedEffect(formation) { prefs.edit().putString("formation", formation).apply() }
     LaunchedEffect(style) { prefs.edit().putString("style", style).apply() }
 
@@ -226,7 +230,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
     val exportBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(encodeBackup(players, matches, formation, style, progressEntries).toByteArray(Charsets.UTF_8))
+                stream.write(encodeBackup(players, matches, formation, style, progressEntries, scoutCandidates).toByteArray(Charsets.UTF_8))
             } ?: error("Could not open the selected destination.")
         }.onSuccess {
             Toast.makeText(context, "Backup exported successfully.", Toast.LENGTH_LONG).show()
@@ -244,6 +248,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             players = backup.players
             matches = backup.matches
             progressEntries = backup.progress
+            scoutCandidates = backup.scoutCandidates
             formation = backup.formation
             style = backup.style
             Toast.makeText(context, "Backup restored successfully.", Toast.LENGTH_LONG).show()
@@ -298,11 +303,11 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
             },
             bottomBar = {
                 NavigationBar {
-                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect").forEachIndexed { index, label ->
+                    listOf("Home", "Squad", "Tactics", "Matches", "Coach", "Game Link", "Connect", "Scout").forEachIndexed { index, label ->
                         NavigationBarItem(
                             selected = tab == index,
                             onClick = { tab = index },
-                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔")[index]) },
+                            icon = { Text(listOf("⌂", "⚽", "♟", "▤", "✦", "▶", "↔", "◎")[index]) },
                             label = { Text(label) }
                         )
                     }
@@ -332,7 +337,7 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     onUploadScreenshot = { squadImagePicker.launch(arrayOf("image/*")) },
                     modifier = Modifier.padding(padding)
                 )
-                2 -> TacticsScreen(formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
+                2 -> TacticsScreen(players, matches, formation, style, { formation = it }, { style = it }, Modifier.padding(padding))
                 3 -> MatchesScreen(matches, { showMatchDialog = true }, Modifier.padding(padding))
                 4 -> CoachScreen(players, matches, formation, style, progressEntries, onLogProgress = { showProgressDialog = true }, onShare = {
                     exportReportPicker.launch("DLS-Coach-AI-coaching-report.txt")
@@ -356,9 +361,28 @@ fun DlsCoachApp(sharedImageUris: List<Uri> = emptyList()) {
                     },
                     modifier = Modifier.padding(padding)
                 )
+                7 -> ScoutScreen(
+                    squad = players,
+                    candidates = scoutCandidates,
+                    onAdd = { showScoutDialog = true },
+                    onRemove = { candidate -> scoutCandidates = scoutCandidates.filterNot { it.name.equals(candidate.name, true) } },
+                    modifier = Modifier.padding(padding)
+                )
             }
         }
 
+        if (showScoutDialog) {
+            AddPlayerDialog(
+                initialPlayer = null,
+                onDismiss = { showScoutDialog = false },
+                onAdd = { candidate ->
+                    if (scoutCandidates.none { it.name.equals(candidate.name, true) } && players.none { it.name.equals(candidate.name, true) }) {
+                        scoutCandidates = scoutCandidates + candidate
+                    }
+                    showScoutDialog = false
+                }
+            )
+        }
         if (showPlayerDialog) {
             AddPlayerDialog(
                 initialPlayer = null,
@@ -580,12 +604,33 @@ fun SquadScreen(
 }
 
 @Composable
-fun TacticsScreen(formation: String, style: String, onFormation: (String) -> Unit, onStyle: (String) -> Unit, modifier: Modifier = Modifier) {
+fun TacticsScreen(players: List<Player>, matches: List<Match>, formation: String, style: String, onFormation: (String) -> Unit, onStyle: (String) -> Unit, modifier: Modifier = Modifier) {
     val formations = listOf("4-2-3-1", "4-3-3", "4-1-2-1-2", "3-5-2", "5-3-2", "4-4-2")
     val styles = listOf("Aggressive attack + compact defence", "Balanced possession", "Fast counter-attack", "High press")
     Page(modifier) {
         Text("Tactical Lab", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Choose a starting structure. These are planning notes, not automatic changes to the game.")
+        Text("Choose a starting structure. Recommendations use your entered squad and manually tagged match notes; they do not observe or control live gameplay.")
+        val recommendations = remember(players, matches) { recommendTactics(players, matches) }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("SQUAD-AWARE TACTICAL RECOMMENDATION", fontWeight = FontWeight.Bold)
+                if (recommendations.isEmpty()) {
+                    Text("Add verified players to calculate formation suitability.")
+                } else {
+                    val best = recommendations.first()
+                    Text("Top fit: ${best.formation}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Suitability score: ${best.score}/100 · Role coverage: ${best.filledSlots}/${best.totalSlots}")
+                    best.reasons.forEach { reason -> Text("• $reason", style = MaterialTheme.typography.bodySmall) }
+                    Divider()
+                    Text("OTHER OPTIONS", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                    recommendations.drop(1).take(2).forEach { option -> Text("${option.formation} — ${option.score}/100 · ${option.filledSlots}/${option.totalSlots} roles covered") }
+                    OutlinedButton(onClick = { onFormation(best.formation) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (formation == best.formation) "Recommended formation selected" else "Use ${best.formation} as planning formation")
+                    }
+                }
+                Text("Scores are transparent heuristics, not validated match-win probabilities. Confirm player positions and attributes before relying on them.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
         Text("Formation", fontWeight = FontWeight.Bold)
         formations.forEach { item ->
             OutlinedButton(onClick = { onFormation(item) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(
@@ -861,6 +906,137 @@ fun PlayerProgressDialog(players: List<Player>, onDismiss: () -> Unit, onSave: (
 }
 
 @Composable
+fun ScoutScreen(
+    squad: List<Player>,
+    candidates: List<Player>,
+    onAdd: () -> Unit,
+    onRemove: (Player) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val assessments = remember(squad, candidates) {
+        candidates.map { assessRecruitment(it, squad) }
+            .sortedWith(compareByDescending<RecruitmentAssessment> { it.score }.thenByDescending { it.candidate.rating })
+    }
+    Page(modifier) {
+        Text("Recruitment & Opponent Scout", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Add players you have legitimately observed in an opponent's squad or in an in-game recruitment market. This is a local shortlist, not automatic access to opponents' private data or the transfer market.")
+        Card {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("RECRUITMENT RULES", fontWeight = FontWeight.Bold)
+                Text("Minimum eligibility: 80 OVR.")
+                Text("A high rating alone is not enough. Each candidate is compared with your registered squad in the same natural position.")
+                Text("No purchase is made. Verify availability and price in DLS, then make the decision yourself.")
+            }
+        }
+        Button(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("Add scouted player") }
+        Text("SHORTLIST · ${candidates.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (assessments.isEmpty()) {
+            Text("No candidates yet. Add a player using the exact name, position, rating and visible card attributes.")
+        } else {
+            assessments.forEach { assessment ->
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(assessment.candidate.name, fontWeight = FontWeight.Bold)
+                                Text("${assessment.candidate.position} · OVR ${assessment.candidate.rating}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text(assessment.decision, color = when {
+                                assessment.decision.startsWith("SIGN") -> MaterialTheme.colorScheme.primary
+                                assessment.decision.startsWith("DO NOT") -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.tertiary
+                            }, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                        Text(assessment.reason, style = MaterialTheme.typography.bodySmall)
+                        if (assessment.candidate.statsKnown) {
+                            Text("SPE ${assessment.candidate.spe} · ACC ${assessment.candidate.acc} · STA ${assessment.candidate.sta} · STR ${assessment.candidate.str} · PAS ${assessment.candidate.pas} · SHO ${assessment.candidate.sho} · TAC ${assessment.candidate.tac}", style = MaterialTheme.typography.labelSmall)
+                        } else {
+                            Text("Card attributes not verified — assessment uses rating and position only.", style = MaterialTheme.typography.labelSmall)
+                        }
+                        TextButton(onClick = { onRemove(assessment.candidate) }) { Text("Remove from shortlist") }
+                    }
+                }
+            }
+        }
+        Text("SCOUTING LIMITS", fontWeight = FontWeight.Bold)
+        Text("Opponent profiles are based only on details you manually enter or can legitimately see. The app does not scrape hidden accounts, inspect private game data, or automatically purchase players.")
+    }
+}
+
+fun assessRecruitment(candidate: Player, squad: List<Player>): RecruitmentAssessment {
+    fun result(decision: String, reason: String, score: Int = 0) =
+        RecruitmentAssessment(candidate, decision, reason, score)
+
+    if (squad.any { it.name.equals(candidate.name, ignoreCase = true) }) {
+        return result("ALREADY OWNED", "This player is already recorded in your squad.", 0)
+    }
+    if (candidate.rating !in 80..100) {
+        return result("DO NOT SIGN", "The candidate does not meet the 80+ overall eligibility threshold.", 0)
+    }
+    if (candidate.position == "UNK") {
+        return result("NEEDS DATA", "Confirm the player's natural position before judging squad fit.", 1)
+    }
+
+    val sameRole = squad.filter { it.position == candidate.position }
+    val depthTarget = when (candidate.position) {
+        "GK" -> 2
+        "CB" -> 3
+        "LB", "RB" -> 1
+        "CDM", "CM", "CAM", "LM", "RM" -> 4
+        "LW", "RW", "CF", "ST" -> 3
+        else -> 2
+    }
+    val currentBest = sameRole.maxByOrNull { player ->
+        if (player.statsKnown) roleScore(player, candidate.position) else player.rating
+    }
+    val candidateScore = if (candidate.statsKnown) roleScore(candidate, candidate.position) else candidate.rating
+    val incumbentScore = currentBest?.let {
+        if (it.statsKnown) roleScore(it, candidate.position) else it.rating
+    } ?: 0
+    val scoreGap = if (currentBest == null) candidateScore else candidateScore - incumbentScore
+    val ratingGap = candidate.rating - (currentBest?.rating ?: 0)
+
+    if (currentBest == null) {
+        return result(
+            "SIGN — USEFUL DEPTH",
+            "No player is currently registered in this position. This fills a documented squad gap.",
+            60 + candidate.rating
+        )
+    }
+
+    // A clear quality upgrade takes priority over the squad-depth suggestion.
+    if (ratingGap >= 3 || (candidate.statsKnown && currentBest.statsKnown && scoreGap >= 6)) {
+        return result(
+            "SIGN — STRONG UPGRADE",
+            "Compared with your best registered ${candidate.position}, this candidate improves overall rating by ${ratingGap} and role-fit score by ${scoreGap}. Verify the card and price in-game.",
+            80 + ratingGap.coerceAtLeast(0) + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    if (sameRole.size < depthTarget) {
+        return result(
+            "SIGN — USEFUL DEPTH",
+            "Your squad has only ${sameRole.size} player(s) in this position; this adds depth. Compare attributes and cost before buying.",
+            60 + candidate.rating + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    if (ratingGap >= 0 || scoreGap >= 0) {
+        return result(
+            "CONSIDER — SITUATIONAL",
+            "The candidate is broadly comparable to your best ${candidate.position}; no clear upgrade is established. Sign only if a specific tactical need or affordable rotation benefit justifies it.",
+            40 + ratingGap + scoreGap.coerceAtLeast(0)
+        )
+    }
+
+    return result(
+        "DO NOT SIGN — SAVE RESOURCES",
+        "Your current ${candidate.position} option rates better on the available evidence. Address another squad weakness or save resources.",
+        10 + candidate.rating
+    )
+}
+
+@Composable
 fun AddPlayerDialog(initialPlayer: Player? = null, onDismiss: () -> Unit, onAdd: (Player) -> Unit) {
     var name by remember { mutableStateOf(initialPlayer?.name ?: "") }
     var position by remember { mutableStateOf(initialPlayer?.position?.takeIf { it != "UNK" } ?: "CM") }
@@ -999,14 +1175,15 @@ fun parseOcrPlayerDrafts(raw: String): List<OcrPlayerDraft> {
         .toList()
 }
 
-fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList()): String =
+fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String, style: String, progress: List<PlayerProgress> = emptyList(), scoutCandidates: List<Player> = emptyList()): String =
     JSONObject()
         .put("app", "DLS Coach AI")
-        .put("schemaVersion", 2)
+        .put("schemaVersion", 3)
         .put("exportedAt", System.currentTimeMillis())
         .put("players", JSONArray(savePlayers(players)))
         .put("matches", JSONArray(saveMatches(matches)))
         .put("progress", JSONArray(saveProgress(progress)))
+        .put("scoutCandidates", JSONArray(savePlayers(scoutCandidates)))
         .put("formation", formation)
         .put("style", style)
         .toString(2)
@@ -1014,7 +1191,7 @@ fun encodeBackup(players: List<Player>, matches: List<Match>, formation: String,
 fun decodeBackup(raw: String): CoachBackup {
     val root = JSONObject(raw)
     require(root.optString("app") == "DLS Coach AI") { "This is not a DLS Coach AI backup." }
-    require(root.optInt("schemaVersion", -1) in 1..2) { "Unsupported backup version." }
+    require(root.optInt("schemaVersion", -1) in 1..3) { "Unsupported backup version." }
     val players = loadPlayers(root.optJSONArray("players")?.toString() ?: "[]")
     val matches = loadMatches(root.optJSONArray("matches")?.toString() ?: "[]")
     require(players.isNotEmpty()) { "The backup contains no readable player records." }
@@ -1022,6 +1199,7 @@ fun decodeBackup(raw: String): CoachBackup {
         players = players,
         matches = matches,
         progress = loadProgress(root.optJSONArray("progress")?.toString() ?: "[]"),
+        scoutCandidates = loadPlayers(root.optJSONArray("scoutCandidates")?.toString() ?: "[]"),
         formation = root.optString("formation", "5-3-2"),
         style = root.optString("style", "Aggressive attack + compact defence")
     )
