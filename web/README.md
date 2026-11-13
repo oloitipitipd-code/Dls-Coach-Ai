@@ -37,3 +37,11 @@ The Edge Function requires a valid Supabase user JWT, enforces a database-backed
 The AI Coach tab includes a built-in deterministic, rules-based analysis engine in `src/lib/localCoach.ts`. It runs entirely in the browser against the user's locally stored squad and match records. It does not call Gemini, ChatGPT, Supabase, or any network service. It reports squad depth, formation role coverage, and descriptive trends from the latest five logged results. It explicitly labels missing data and does not claim to predict wins or observe live gameplay.
 
 The optional cloud AI action remains separate. It requires Supabase sign-in, a deployed Edge Function, and a server-side Gemini key. The app's core offline coaching report does not require those services. This offline engine is a specialised decision-support rules engine, not a locally trained foundation language model.
+
+## Offline backup and restore
+
+The Settings page can export the locally stored squad and match history as a versioned JSON backup. Restore validates the schema, record limits, IDs, positions, ratings, dates and goal counts before replacing local records. Restore requires explicit confirmation because it replaces the current local squad and match history. The backup contains only these records; it does not include Supabase credentials or private AI keys.
+
+## Offline coaching behaviour
+
+The built-in coach uses maximum-cardinality role matching across formation slots, preferring exact positions and higher ratings while avoiding avoidable role conflicts. Match summaries sort records by date before selecting the latest five. These are explainable heuristics, not a trained model or a win predictor.
