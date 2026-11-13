@@ -10,27 +10,61 @@ const formations: Record<string, string[]> = {
   "4-4-2": ["GK","CB","CB","LB","RB","LM","RM","CM","CM","ST","ST"],
 };
 const alternatives: Record<string, string[]> = {
-  LB: ["LB","LM"], RB: ["RB","RM"], CDM: ["CDM","CM"], CM: ["CM","CDM","CAM"],
-  CAM: ["CAM","CM","CF"], LM: ["LM","LW","LB"], RM: ["RM","RW","RB"],
+  LB: ["LB","LM"], RB: ["RB","RM"], CDM: ["CDM","CM"],
+  CM: ["CM","CDM","CAM"], CAM: ["CAM","CM","CF"],
+  LM: ["LM","LW","LB"], RM: ["RM","RW","RB"],
   LW: ["LW","LM","ST"], RW: ["RW","RM","ST"], ST: ["ST","CF"], CF: ["CF","ST"],
 };
 
+function eligibleFor(player: CoachPlayer, slot: string): boolean {
+  return player.position === slot || (alternatives[slot] ?? [slot]).includes(player.position);
+}
+
+/**
+ * Maximum-cardinality bipartite matching for the XI slots.
+ * Scarce roles are assigned first; exact-position and higher-rated players
+ * are preferred. Augmenting paths prevent a flexible player blocking an
+ * exact-fit player from a role they uniquely cover.
+ */
 function assessFormation(players: CoachPlayer[], slots: string[]) {
-  const remaining = [...players];
-  let filled = 0;
+  const candidates = slots.map((slot, index) => ({
+    slot, index,
+    eligible: players
+      .map((player, playerIndex) => ({ player, playerIndex, exact: player.position === slot }))
+      .filter(item => eligibleFor(item.player, slot))
+      .sort((a,b) => Number(b.exact)-Number(a.exact) || b.player.rating-a.player.rating),
+  })).sort((a,b) =>
+    a.eligible.length-b.eligible.length ||
+    b.eligible.filter(x=>x.exact).length-a.eligible.filter(x=>x.exact).length ||
+    a.index-b.index
+  );
+
+  const ownerByPlayer = new Map<number, number>();
+  const playerBySlot = new Map<number, number>();
+  function assign(slotIndex: number, seen: Set<number>): boolean {
+    const slot = candidates.find(item => item.index === slotIndex)!;
+    for (const candidate of slot.eligible) {
+      if (seen.has(candidate.playerIndex)) continue;
+      seen.add(candidate.playerIndex);
+      const previousSlot = ownerByPlayer.get(candidate.playerIndex);
+      if (previousSlot === undefined || assign(previousSlot, seen)) {
+        ownerByPlayer.set(candidate.playerIndex, slotIndex);
+        playerBySlot.set(slotIndex, candidate.playerIndex);
+        return true;
+      }
+    }
+    return false;
+  }
+  for (const item of candidates) assign(item.index, new Set<number>());
+
   let ratingTotal = 0;
   const missing: string[] = [];
-  for (const slot of slots) {
-    const eligible = remaining
-      .map((player, index) => ({ player, index, exact: player.position === slot }))
-      .filter(item => item.exact || (alternatives[slot] ?? [slot]).includes(item.player.position))
-      .sort((a,b) => Number(b.exact)-Number(a.exact) || b.player.rating-a.player.rating);
-    const best = eligible[0];
-    if (!best) { missing.push(slot); continue; }
-    remaining.splice(best.index, 1);
-    filled++;
-    ratingTotal += best.player.rating;
+  for (let index=0; index<slots.length; index++) {
+    const playerIndex = playerBySlot.get(index);
+    if (playerIndex === undefined) missing.push(slots[index]);
+    else ratingTotal += players[playerIndex].rating;
   }
+  const filled = slots.length-missing.length;
   return { filled, averageRating: filled ? ratingTotal / filled : 0, missing };
 }
 
@@ -52,12 +86,12 @@ export function generateLocalCoachReport(players: CoachPlayer[], matches: CoachM
     if (!(counts.get("GK") ?? 0)) lines.push("Data warning: no goalkeeper is registered. Formation recommendations are incomplete.");
     if ((counts.get("CB") ?? 0) < 2) lines.push("Squad-depth warning: fewer than two centre-backs are registered.");
     if ((counts.get("ST") ?? 0) + (counts.get("CF") ?? 0) < 1) lines.push("Squad-depth warning: no recognised striker is registered.");
-    lines.push("Important: this greedy role-fit estimate uses entered positions and ratings only. It does not model hidden game mechanics, chemistry, player movement or predict wins.");
+    lines.push("Important: this role-matching heuristic uses entered positions and ratings only. It does not model hidden game mechanics, chemistry, player movement or predict wins.");
   }
   lines.push("", "MATCH RECORD");
-  if (!matches.length) lines.push("No match results have been logged. Add results before drawing conclusions about form.");
+  const recent = [...matches].sort((a,b)=>Date.parse(b.date)-Date.parse(a.date)).slice(0,5);
+  if (!recent.length) lines.push("No match results have been logged. Add results before drawing conclusions about form.");
   else {
-    const recent = matches.slice(0,5);
     const wins = recent.filter(m=>m.gf>m.ga).length;
     const draws = recent.filter(m=>m.gf===m.ga).length;
     const losses = recent.length-wins-draws;
@@ -70,5 +104,5 @@ export function generateLocalCoachReport(players: CoachPlayer[], matches: CoachM
     lines.push("This is descriptive analysis of manually entered results, not proof that a formation caused the outcomes.");
   }
   lines.push("", "DATA QUALITY", "Only user-entered player and match records were analysed. Opponent formation, live events, player attributes not entered, and DLS-specific mechanics are unknown unless separately documented.");
-  return lines.join("\n");
+  return lines.join("\\n");
 }
