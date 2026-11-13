@@ -25,22 +25,32 @@ describe("generateLocalCoachReport", () => {
     ];
     const report = generateLocalCoachReport(players, []);
     expect(report).toContain("FORMATION FIT");
-    expect(report).toMatch(/4-3-3: 11\/11 roles covered|4-2-3-1: 11\/11 roles covered/);
+    expect(report).toMatch(/4-3-3: 11\\/11 roles covered|4-2-3-1: 11\\/11 roles covered/);
     expect(report).toContain("does not model hidden game mechanics");
   });
 
-  it("summarizes only the latest five supplied match records", () => {
+  it("uses the calendar order, not input order, to select the latest five matches", () => {
     const matches: CoachMatch[] = [
-      { id: "1", date: "2026-11-13", gf: 3, ga: 0 },
-      { id: "2", date: "2026-11-12", gf: 1, ga: 1 },
-      { id: "3", date: "2026-11-11", gf: 0, ga: 2 },
-      { id: "4", date: "2026-11-10", gf: 2, ga: 1 },
-      { id: "5", date: "2026-11-09", gf: 1, ga: 0 },
-      { id: "6", date: "2026-11-08", gf: 0, ga: 9 },
+      { id: "oldest", date: "2026-11-01", gf: 0, ga: 9 },
+      { id: "2", date: "2026-11-09", gf: 1, ga: 0 },
+      { id: "3", date: "2026-11-10", gf: 2, ga: 1 },
+      { id: "4", date: "2026-11-11", gf: 0, ga: 2 },
+      { id: "5", date: "2026-11-12", gf: 1, ga: 1 },
+      { id: "newest", date: "2026-11-13", gf: 3, ga: 0 },
     ];
     const report = generateLocalCoachReport([], matches);
     expect(report).toContain("Latest 5 logged matches: 3 wins, 1 draws, 1 losses.");
     expect(report).toContain("7 scored, 4 conceded");
     expect(report).not.toContain("0 – 9");
+  });
+
+  it("does not mutate the caller's match list when sorting records", () => {
+    const matches: CoachMatch[] = [
+      { id: "later", date: "2026-11-13", gf: 1, ga: 0 },
+      { id: "earlier", date: "2026-11-12", gf: 0, ga: 1 },
+    ];
+    const originalOrder = matches.map(match => match.id);
+    generateLocalCoachReport([], matches);
+    expect(matches.map(match => match.id)).toEqual(originalOrder);
   });
 });
