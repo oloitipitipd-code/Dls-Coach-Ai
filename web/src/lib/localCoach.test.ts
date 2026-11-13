@@ -25,7 +25,7 @@ describe("generateLocalCoachReport", () => {
     ];
     const report = generateLocalCoachReport(players, []);
     expect(report).toContain("FORMATION FIT");
-    expect(report).toMatch(/4-3-3: 11\\/11 roles covered|4-2-3-1: 11\\/11 roles covered/);
+    expect(report.includes("4-3-3: 11/11 roles covered") || report.includes("4-2-3-1: 11/11 roles covered")).toBe(true);
     expect(report).toContain("does not model hidden game mechanics");
   });
 
